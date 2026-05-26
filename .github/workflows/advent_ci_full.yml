@@ -1,0 +1,77 @@
+name: Full CI & Release
+
+on:
+  push:
+    branches: [ "main", "release/*" ]
+
+jobs:
+  build-and-package:
+    name: Release Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Release]
+        
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Linux Dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libgl1-mesa-dev xorg-dev
+
+    - name: Configure CMake
+      run: >
+        cmake -B ${{github.workspace}}/build
+        -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+        -S ${{github.workspace}}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: AdventEngine-${{ matrix.os }}
+        path: |
+          ${{github.workspace}}/build/AdventEngine
+          ${{github.workspace}}/build/AdventEngine.exe
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: build-and-package 
+    runs-on: ubuntu-latest
+    
+    if: startsWith(github.ref, 'refs/heads/release/') 
+    
+    permissions:
+      contents: write 
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: downloaded-artifacts
+
+    - name: Zip Archives
+      run: |
+        cd downloaded-artifacts
+        zip -r ../AdventEngine-Ubuntu.zip AdventEngine-ubuntu-latest/
+        zip -r ../AdventEngine-Windows.zip AdventEngine-windows-latest/
+        cd ..
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }} 
+        name: AdventEngine ${{ github.ref_name }}
+        body: "Автоматична збірка рушія. Завантажте архів для вашої ОС нижче."
+        draft: true 
+        files: |
+          AdventEngine-Ubuntu.zip
+          AdventEngine-Windows.zip

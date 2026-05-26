@@ -1,0 +1,34 @@
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 120
+
+# Вказівники притискаємо до типу (сучасний стандарт C++)
+# Вийде: int* pointer; 
+PointerAlignment: Left
+
+AlignConsecutiveAssignments: true
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterEnum: true
+  
+  AfterControlStatement: false
+  BeforeElse: false
+  
+  SplitEmptyFunction: false
+
+# Забороняємо форматові стискати if та цикли в один суцільний рядок
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+
+MaxEmptyLinesToKeep: 1
