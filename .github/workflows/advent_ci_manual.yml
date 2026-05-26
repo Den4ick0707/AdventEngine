@@ -1,1 +1,40 @@
+name: Manual Utilities
 
+on:
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: 'Оберіть задачу для виконання'
+        required: true
+        default: 'clean_cache'
+        type: choice
+        options:
+        - clean_cache
+        - generate_docs
+        - force_rebuild
+      os_target:
+        description: 'На якій ОС запустити?'
+        required: true
+        default: 'ubuntu-latest'
+        type: choice
+        options:
+        - ubuntu-latest
+        - windows-latest
+
+jobs:
+  execute-task:
+    name: Task [${{ inputs.task_type }}] on ${{ inputs.os_target }}
+    
+    runs-on: ${{ inputs.os_target }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Selected Utility
+      run: |
+        echo "=== AdventEngine Manual Task Runner ==="
+        echo "Замовлено виконання задачі: ${{ inputs.task_type }}"
+        echo "Операційна система: ${{ inputs.os_target }}"
+        echo "======================================="
+        
