@@ -5,6 +5,7 @@ on:
     branches: [ "main", "release/*" ]
 
 jobs:
+  # 1. ЗАДАЧА КОМПІЛЯЦІЇ (CI)
   build-and-package:
     name: Release Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -41,3 +42,37 @@ jobs:
         path: |
           ${{github.workspace}}/build/AdventEngine
           ${{github.workspace}}/build/AdventEngine.exe
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: build-and-package 
+    runs-on: ubuntu-latest
+    
+    if: startsWith(github.ref, 'refs/heads/release/') 
+    
+    permissions:
+      contents: write 
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: downloaded-artifacts
+
+    - name: Zip Archives
+      run: |
+        cd downloaded-artifacts
+        zip -r ../AdventEngine-Ubuntu.zip AdventEngine-ubuntu-latest/
+        zip -r ../AdventEngine-Windows.zip AdventEngine-windows-latest/
+        cd ..
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }} 
+        name: AdventEngine ${{ github.ref_name }}
+        body: "Автоматична збірка рушія. Завантажте архів для вашої ОС нижче."
+        draft: true # Створює чернетку (Draft), щоб ти міг перевірити все перед публікацією
+        files: |
+          AdventEngine-Ubuntu.zip
+          AdventEngine-Windows.zip
