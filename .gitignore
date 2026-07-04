@@ -1,6 +1,8 @@
 # CMaake
 build/
 build-*/
+build-debug/
+build-release/
 out/
 bin/
 CMakeCache.txt
