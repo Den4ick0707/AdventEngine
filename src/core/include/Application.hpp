@@ -1,31 +1,45 @@
-#ifndef __ADVENTENGINE_CORE_APPLICATION_H__
-#define __ADVENTENGINE_CORE_APPLICATION_H__
+#ifndef __ADVENTENGINE_CORE_APPLICATION_HPP__
+#define __ADVENTENGINE_CORE_APPLICATION_HPP__
+
+#include "IModule.hpp"
+#include "Window.hpp"
 
 namespace AdventEngine::Core
 {
 class Application
 {
-
-  public:
+public:
     Application();
     virtual ~Application();
-    Application(const Application&)            = delete;
+
+    Application(const Application&) = delete;
     Application& operator=(const Application&) = delete;
 
+    Application(Application&&) = delete;
+    Application& operator=(Application&&) = delete;
+
     void Run();
-    virtual void Update(float dt) = 0;
-    virtual void Render()         = 0;
+    void Quit() noexcept;
 
-    void Quit()
-    {
-        Running = false;
-    }
+    [[nodiscard]]
+    Window& GetWindow() noexcept;
 
-  private:
-    static Application* s_Instance;
-    bool Running = true;
+protected:
+    void PushModule(std::unique_ptr<IModule> module);
+
+    virtual void Initialize() {}
+    virtual void Update(float deltaTime) {}
+    virtual void Render() {}
+    virtual void Shutdown() {}
+
+private:
+    std::unique_ptr<Window> m_Window;
+    std::vector<std::unique_ptr<IModule>> m_Modules;
+
+    bool m_Running = true;
 };
 
-Application* CreateApplication();
+std::unique_ptr<Application> CreateApplication();
 }
+
 #endif

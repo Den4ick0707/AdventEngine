@@ -10,12 +10,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build vendored dependencies as shared libraries" FORCE)
 
-add_library(${PROJECT_NAME} SHARED src/main.cpp)
-
+add_library(${PROJECT_NAME} SHARED AdventEngine.cpp)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/link_libs/")
 
 include(LinkGLFWLib)
-include(LinkGLADLib)
 include(LinkGLMLib)
 include(LinkJSONLib)
 include(LinkSTBLib)
+include(LinkVulkanSDK)
+
+add_subdirectory(src/core)
+add_subdirectory(Sandbox)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC advent_engine_core)
+
