@@ -1,0 +1,19 @@
+# Categories for automatically generated release notes (by PR label).
+changelog:
+  exclude:
+    labels: [skip-changelog]
+  categories:
+    - title: Нові можливості
+      labels: [feature]
+    - title: Виправлення
+      labels: [bug]
+    - title: Рендерер і шейдери
+      labels: [renderer]
+    - title: Залежності (vendor)
+      labels: [vendor, dependencies]
+    - title: CI, збирання, інструменти
+      labels: [ci, build]
+    - title: Документація
+      labels: [docs]
+    - title: Інше
+      labels: ['*']

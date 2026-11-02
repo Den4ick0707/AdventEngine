@@ -1,4 +1,4 @@
-# Third-party dependencies. Every library is a pinned git submodule (see docs/adr/0001).
+# Third-party dependencies, vendored as plain copies (see docs/adr/0005 and vendor/README.md).
 # All of them are added as SYSTEM so their headers never trigger project warnings.
 
 # --- GLFW: window and input ----------------------------------------------------

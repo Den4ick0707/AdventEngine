@@ -1,7 +1,9 @@
 name: Release
 
-# Push a version tag to build Release binaries and open a draft GitHub Release:
-#   git tag v0.1.0 && git push origin v0.1.0
+# A version tag on main builds Release binaries and opens a draft GitHub Release.
+# The whole flow (release/* branch, PR into main, tag) is described in CONTRIBUTING.md:
+#   git tag -a v0.1.0 -m "AdventEngine 0.1.0" && git push origin v0.1.0
+# Tags with a suffix (v0.2.0-rc.1) become pre-releases.
 on:
   push:
     tags: ['v*']
@@ -10,9 +12,29 @@ permissions:
   contents: read
 
 jobs:
+  check:
+    name: Check version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tag must match project(VERSION ...) in CMakeLists.txt, so binaries report the right version.
+      - name: Tag matches CMake version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(sed -nE 's/^ *VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -1)"
+          echo "tag=$tag cmake=$version"
+          [ "${tag%%-*}" = "$version" ] || {
+            echo "::error::Tag $GITHUB_REF_NAME does not match VERSION $version in CMakeLists.txt"
+            exit 1
+          }
+
   build:
     name: Build / ${{ matrix.name }}
+    needs: check
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -21,8 +43,6 @@ jobs:
           - { name: windows, os: windows-2022 }
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -65,6 +85,7 @@ jobs:
     name: Draft GitHub Release
     needs: build
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
@@ -73,9 +94,11 @@ jobs:
           pattern: package-*
           merge-multiple: true
 
+      # Notes are generated from merged PRs, grouped by labels (.github/release.yml).
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           name: AdventEngine ${{ github.ref_name }}
-          body: Автоматична збірка AdventEngine. Завантажте архів для своєї ОС.
+          generate_release_notes: true
           files: AdventEngine-*.zip

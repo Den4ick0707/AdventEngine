@@ -1,0 +1,9 @@
+add_executable(sandbox)
+
+target_sources(sandbox
+    PRIVATE
+        src/main.cpp
+)
+
+target_link_libraries(sandbox PRIVATE advent::runtime)
+advent_set_warnings(sandbox)
