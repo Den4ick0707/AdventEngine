@@ -1,0 +1,9 @@
+
+
+# Subject: English, imperative, capital letter, <= 72 chars, no period.
+#   Add swapchain recreation
+#   Fix validation error on window resize
+#   vendor(glfw): Fix resize event on X11
+#
+# Body (optional, after a blank line): what and why, not how.
+# Footer (optional): Closes #12

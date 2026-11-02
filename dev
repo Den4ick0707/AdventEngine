@@ -1,0 +1,392 @@
+#!/usr/bin/env bash
+# AdventEngine developer tool: one entry point for setup, build, test, run and checks.
+# Run `./dev help` for the list of commands. CI uses the same commands, so "works with ./dev ci"
+# means "works in CI".
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+DEFAULT_PRESET="${ADVENT_PRESET:-debug}"
+RUNS_DIR="$ROOT/scripts/runs"
+SMOKE_FRAMES="${ADVENT_SMOKE_FRAMES:-120}"
+
+# Packages for Ubuntu/Debian (same list as CI).
+APT_PACKAGES=(
+    build-essential cmake ninja-build pkg-config git git-lfs
+    libwayland-dev libxkbcommon-dev wayland-protocols xorg-dev
+    glslc vulkan-tools vulkan-validationlayers mesa-vulkan-drivers
+    clang-format clang-tidy xvfb gdb
+)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+if [[ -t 1 ]]; then
+    c_bold=$'\e[1m' c_red=$'\e[31m' c_green=$'\e[32m' c_yellow=$'\e[33m' c_reset=$'\e[0m'
+else
+    c_bold='' c_red='' c_green='' c_yellow='' c_reset=''
+fi
+
+step() { printf '%s==> %s%s\n' "$c_bold" "$*" "$c_reset"; }
+ok() { printf '%s  ok%s %s\n' "$c_green" "$c_reset" "$*"; }
+warn() { printf '%s warn%s %s\n' "$c_yellow" "$c_reset" "$*" >&2; }
+die() {
+    printf '%serror%s %s\n' "$c_red" "$c_reset" "$*" >&2
+    exit 1
+}
+has() { command -v "$1" >/dev/null 2>&1; }
+
+# Prefer the version CI uses (18), fall back to the unversioned tool. Override with CLANG_FORMAT / CLANG_TIDY.
+find_tool() {
+    local name="$1" candidate
+    for candidate in "$name-18" "$name"; do
+        if has "$candidate"; then
+            echo "$candidate"
+            return
+        fi
+    done
+    die "$name not found (./dev setup --install)"
+}
+
+preset_exists() {
+    cmake --list-presets 2>/dev/null | grep -q "\"$1\""
+}
+
+ensure_configured() {
+    local preset="$1"
+    if [[ ! -f "build/$preset/build.ninja" ]]; then
+        step "configure ($preset)"
+        cmake --preset "$preset"
+    fi
+}
+
+cpp_sources() {
+    # Only our code. vendor/ is never formatted or linted.
+    git ls-files 'engine/*.cpp' 'engine/*.hpp' 'apps/*.cpp' 'apps/*.hpp' 'tests/*.cpp' 'tests/*.hpp'
+}
+
+# Wrap a command with xvfb-run when there is no display (SSH, containers, CI).
+with_display() {
+    if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]] && has xvfb-run; then
+        if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
+            export XDG_RUNTIME_DIR="${TMPDIR:-/tmp}/advent-xdg-$UID"
+            mkdir -p -m 700 "$XDG_RUNTIME_DIR"
+        fi
+        xvfb-run -a "$@"
+    else
+        "$@"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Commands
+# ---------------------------------------------------------------------------
+cmd_help() {
+    cat <<EOF
+${c_bold}AdventEngine dev tool${c_reset}   ./dev <command> [args]
+
+Setup
+  setup [--install]           check tools, enable git hooks and repo git settings
+                              (--install: apt-get install the missing packages)
+
+Build & test                  [preset] defaults to \$ADVENT_PRESET or "debug"
+  configure [preset]          cmake --preset
+  build [preset] [target]     configure if needed, then build
+  test [preset] [ctest args]  build, then run unit tests
+  run [preset] [-- args]      build and run sandbox:  ./dev run debug -- --frames 600
+  smoke [preset]              headless sandbox run; fails on errors and Vulkan warnings
+  clean [preset|all]          remove build/<preset> or the whole build/
+
+Run profiles (scripts/runs/*.sh, personal ones in scripts/runs/local/)
+  profiles                    list profiles
+  p <name> [args]             run a profile:  ./dev p sandbox-gdb
+  new-profile <name>          create scripts/runs/local/<name>.sh from the template
+
+Code quality
+  format [--check]            clang-format engine/, apps/, tests/
+  tidy [preset] [files...]    clang-tidy (all our .cpp files by default)
+  ci                          everything CI checks: format, ci-debug build + tests, smoke, tidy
+
+Dependencies
+  vendor-update <dir> <git-url> <tag>   replace vendor/<dir> with a fresh copy of <tag>
+
+Presets: debug, release, relwithdebinfo, asan, ci-debug, ci-release
+EOF
+}
+
+cmd_setup() {
+    local install=0
+    [[ "${1:-}" == "--install" ]] && install=1
+
+    if ((install)); then
+        has apt-get || die "--install supports apt-based distros only. Install manually: ${APT_PACKAGES[*]}"
+        step "apt-get install"
+        local sudo=""
+        [[ $EUID -ne 0 ]] && sudo="sudo"
+        $sudo apt-get update
+        $sudo apt-get install -y --no-install-recommends "${APT_PACKAGES[@]}"
+    fi
+
+    step "tools"
+    local missing=0 tool
+    for tool in git cmake ninja c++ glslc; do
+        if has "$tool"; then ok "$tool"; else warn "$tool not found" && missing=1; fi
+    done
+    for tool in git-lfs clang-format clang-tidy xvfb-run vulkaninfo gdb; do
+        if has "$tool"; then ok "$tool"; else warn "$tool not found (optional)"; fi
+    done
+    if has cmake; then
+        local version
+        version="$(cmake --version | head -1 | awk '{print $3}')"
+        if [[ "$(printf '%s\n3.25\n' "$version" | sort -V | head -1)" != "3.25" ]]; then
+            warn "CMake $version is older than 3.25" && missing=1
+        fi
+    fi
+    if has vulkaninfo && ! vulkaninfo --summary >/dev/null 2>&1; then
+        warn "vulkaninfo failed: no working Vulkan driver?"
+    fi
+
+    step "git"
+    git config core.hooksPath .githooks
+    ok "hooks: .githooks (format check, commit message, protected branches)"
+    git config commit.template .gitmessage
+    ok "commit template: .gitmessage"
+    git config pull.rebase true
+    git config fetch.prune true
+    git config push.autoSetupRemote true
+    ok "pull.rebase, fetch.prune, push.autoSetupRemote"
+    if has git-lfs; then
+        # Hooks are not installed by git-lfs: .githooks/ already forwards to it.
+        git lfs install --local --skip-repo >/dev/null
+        ok "git lfs filters (assets/); LFS hooks are part of .githooks/"
+    fi
+
+    if ((missing)); then
+        warn "some required tools are missing: run ./dev setup --install"
+        return 1
+    fi
+    step "done. Next: ./dev build && ./dev run"
+}
+
+cmd_configure() {
+    local preset="${1:-$DEFAULT_PRESET}"
+    step "configure ($preset)"
+    cmake --preset "$preset"
+}
+
+cmd_build() {
+    local preset="${1:-$DEFAULT_PRESET}" target="${2:-}"
+    ensure_configured "$preset"
+    step "build ($preset${target:+, $target})"
+    if [[ -n "$target" ]]; then
+        cmake --build --preset "$preset" --target "$target"
+    else
+        cmake --build --preset "$preset"
+    fi
+}
+
+cmd_test() {
+    local preset="${1:-$DEFAULT_PRESET}"
+    shift || true
+    cmd_build "$preset"
+    step "test ($preset)"
+    ctest --preset "$preset" "$@"
+}
+
+cmd_run() {
+    local preset="$DEFAULT_PRESET"
+    if [[ $# -gt 0 && "$1" != "--" ]]; then
+        preset="$1"
+        shift
+    fi
+    [[ "${1:-}" == "--" ]] && shift
+    cmd_build "$preset" sandbox
+    step "run sandbox ($preset) $*"
+    "build/$preset/bin/sandbox" "$@"
+}
+
+cmd_smoke() {
+    local preset="${1:-$DEFAULT_PRESET}"
+    cmd_build "$preset" sandbox
+    step "smoke ($preset, $SMOKE_FRAMES frames)"
+    local log="build/$preset/smoke.log"
+    local status=0
+    with_display "build/$preset/bin/sandbox" --frames "$SMOKE_FRAMES" 2>&1 | tee "$log" || status=$?
+    ((status == 0)) || die "sandbox exited with code $status (log: $log)"
+    if grep -E '\[error\]|\[warn \] \[vulkan\]' "$log" >/dev/null; then
+        die "errors or Vulkan validation warnings in the log ($log)"
+    fi
+    ok "smoke test passed"
+}
+
+cmd_clean() {
+    local what="${1:-$DEFAULT_PRESET}"
+    if [[ "$what" == "all" ]]; then
+        step "remove build/"
+        rm -rf build
+    else
+        step "remove build/$what"
+        rm -rf "build/$what"
+    fi
+}
+
+list_profiles() {
+    local file
+    for file in "$RUNS_DIR"/*.sh "$RUNS_DIR"/local/*.sh; do
+        [[ -f "$file" ]] || continue
+        local name
+        name="$(basename "$file" .sh)"
+        [[ "$name" == _* ]] && continue
+        local description
+        description="$(grep -m1 '^DESCRIPTION=' "$file" | cut -d= -f2- | tr -d '"')"
+        local scope=""
+        [[ "$file" == */local/* ]] && scope=" (local)"
+        printf '  %-24s %s%s\n' "$name" "$description" "$scope"
+    done
+}
+
+cmd_profiles() {
+    step "run profiles: ./dev p <name> [extra args]"
+    list_profiles
+}
+
+cmd_profile() {
+    local name="${1:-}"
+    [[ -n "$name" ]] || {
+        cmd_profiles
+        exit 1
+    }
+    shift
+    local file="$RUNS_DIR/local/$name.sh"
+    [[ -f "$file" ]] || file="$RUNS_DIR/$name.sh"
+    [[ -f "$file" ]] || die "profile '$name' not found. Available:$(printf '\n')$(list_profiles)"
+
+    # Profile variables (see scripts/runs/_template.sh).
+    local DESCRIPTION="" PRESET="$DEFAULT_PRESET" TARGET="sandbox"
+    local -a ARGS=() RUNNER=()
+    local HEADLESS=0
+    # shellcheck source=/dev/null
+    source "$file"
+
+    if declare -F run >/dev/null; then
+        step "profile $name: $DESCRIPTION"
+        run "$@"
+        return
+    fi
+
+    cmd_build "$PRESET" "$TARGET"
+    step "profile $name: $DESCRIPTION"
+    local -a command=("${RUNNER[@]}" "build/$PRESET/bin/$TARGET" "${ARGS[@]}" "$@")
+    if ((HEADLESS)); then
+        with_display "${command[@]}"
+    else
+        "${command[@]}"
+    fi
+}
+
+cmd_new_profile() {
+    local name="${1:-}"
+    [[ -n "$name" ]] || die "usage: ./dev new-profile <name>"
+    local file="$RUNS_DIR/local/$name.sh"
+    [[ -e "$file" ]] && die "$file already exists"
+    mkdir -p "$RUNS_DIR/local"
+    sed "s/^DESCRIPTION=.*/DESCRIPTION=\"$name\"/" "$RUNS_DIR/_template.sh" >"$file"
+    ok "created $file (not committed: scripts/runs/local/ is in .gitignore)"
+    ok "run it with: ./dev p $name"
+}
+
+cmd_format() {
+    local clang_format="${CLANG_FORMAT:-$(find_tool clang-format)}"
+    if [[ "${1:-}" == "--check" ]]; then
+        step "format check ($clang_format)"
+        cpp_sources | xargs "$clang_format" --dry-run --Werror
+        ok "formatting is clean"
+    else
+        step "format ($clang_format)"
+        cpp_sources | xargs "$clang_format" -i
+        ok "formatted"
+    fi
+}
+
+cmd_tidy() {
+    local preset="ci-debug"
+    if [[ $# -gt 0 ]] && preset_exists "$1"; then
+        preset="$1"
+        shift
+    fi
+    local clang_tidy="${CLANG_TIDY:-$(find_tool clang-tidy)}"
+    ensure_configured "$preset"
+    step "clang-tidy ($clang_tidy, $preset)"
+    local -a files=("$@")
+    if [[ ${#files[@]} -eq 0 ]]; then
+        mapfile -t files < <(git ls-files 'engine/*.cpp' 'apps/*.cpp' 'tests/*.cpp')
+    fi
+    # "N warnings generated" counts system-header warnings that are filtered anyway: hide that noise.
+    printf '%s\n' "${files[@]}" |
+        xargs -P "$(nproc 2>/dev/null || echo 4)" -n 4 "$clang_tidy" -p "build/$preset" --quiet --warnings-as-errors='*' 2>&1 |
+        { grep -vE '^[0-9]+ warnings? generated\.$' || true; }
+    ok "clang-tidy is clean"
+}
+
+cmd_ci() {
+    cmd_format --check
+    cmd_test ci-debug
+    cmd_smoke ci-debug
+    cmd_tidy ci-debug
+    step "${c_green}all CI checks passed${c_reset}"
+}
+
+cmd_vendor_update() {
+    local dir="${1:-}" url="${2:-}" tag="${3:-}"
+    [[ -n "$dir" && -n "$url" && -n "$tag" ]] || die "usage: ./dev vendor-update <dir> <git-url> <tag>"
+    [[ "$dir" != */* && "$dir" != "." && "$dir" != ".." ]] || die "<dir> is a folder name inside vendor/, e.g. glfw"
+    [[ -z "$(git status --porcelain -- "vendor/$dir")" ]] || die "vendor/$dir has uncommitted changes"
+
+    local patches
+    patches="$(git log --oneline --grep="^vendor($dir)" -- "vendor/$dir" || true)"
+
+    local tmp
+    tmp="$(mktemp -d)"
+    # shellcheck disable=SC2064 # expand now: $tmp is local and gone when the EXIT trap runs
+    trap "rm -rf '$tmp'" EXIT
+    step "download $url @ $tag"
+    git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$tag" "$url" "$tmp/$dir"
+    rm -rf "$tmp/$dir/.git"
+    rm -rf "vendor/$dir"
+    mv "$tmp/$dir" "vendor/$dir"
+    git add -A "vendor/$dir"
+    git status --short -- "vendor/$dir" | tail -5
+    ok "vendor/$dir replaced with $tag (staged)"
+    if [[ -n "$patches" ]]; then
+        warn "earlier local patches to re-apply (see vendor/README.md):"
+        echo "$patches" >&2
+    fi
+    echo "Next: update vendor/README.md, run ./dev ci, commit as \"vendor($dir): Update to $tag\""
+}
+
+# ---------------------------------------------------------------------------
+main() {
+    local command="${1:-help}"
+    shift || true
+    case "$command" in
+    help | -h | --help) cmd_help ;;
+    setup) cmd_setup "$@" ;;
+    configure) cmd_configure "$@" ;;
+    build) cmd_build "$@" ;;
+    test) cmd_test "$@" ;;
+    run) cmd_run "$@" ;;
+    smoke) cmd_smoke "$@" ;;
+    clean) cmd_clean "$@" ;;
+    profiles) cmd_profiles ;;
+    p | profile) cmd_profile "$@" ;;
+    new-profile) cmd_new_profile "$@" ;;
+    format) cmd_format "$@" ;;
+    tidy) cmd_tidy "$@" ;;
+    ci) cmd_ci ;;
+    vendor-update) cmd_vendor_update "$@" ;;
+    *) die "unknown command '$command' (./dev help)" ;;
+    esac
+}
+
+main "$@"

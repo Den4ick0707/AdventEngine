@@ -25,3 +25,7 @@
 
 # glTF JSON is text: keep it diffable
 *.gltf text
+
+# vendor/ holds plain copies of third-party libraries (ADR 0005): never store them in LFS,
+# so a clone works offline without git-lfs. "!" resets the LFS attributes set above.
+vendor/** !filter !diff !merge linguist-vendored

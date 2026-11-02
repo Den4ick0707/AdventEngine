@@ -1,6 +1,6 @@
 # 0001. Git submodules for dependencies
 
-- Статус: Accepted
+- Статус: Superseded by [0005](0005-vendored-dependencies.md)
 - Дата: 2026-11-02
 
 ## Контекст

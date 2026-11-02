@@ -19,7 +19,7 @@
 | Мова | C++20 (без C++20-модулів) |
 | Платформи | Windows (MSVC 2022), Linux (GCC 13+ / Clang 17+) |
 | Збирання | CMake ≥ 3.25 + Ninja, `CMakePresets.json` |
-| Залежності | Git submodules у `third_party/`, зафіксовані на тегах (ADR 0001) |
+| Залежності | Копії бібліотек у `vendor/` — офлайн-збирання, локальні правки (ADR 0005) |
 | Графіка | Vulkan 1.3: dynamic rendering, synchronization2 |
 | Vulkan | `Vulkan-Headers` + **volk** (завантажувач) + **VMA** (пам'ять) |
 | Вікно / ввід | **GLFW** 3.4 (статично) |
@@ -39,7 +39,7 @@
 | `animation` | ⬜ | core | скелет, кліпи, семплінг, матриці суглобів |
 | `scene` | ⬜ | core, animation | сутності, трансформації, ієрархія |
 
-Застосунки — в `apps/` (зараз `apps/sandbox`), тести — в `tests/<module>/`, шейдери — в `shaders/`, моделі й текстури — в `assets/` (Git LFS).
+Застосунки — в `apps/` (зараз `apps/sandbox`), тести — в `tests/<module>/`, шейдери — в `shaders/`, моделі й текстури — в `assets/` (Git LFS), сторонні бібліотеки — у `vendor/`, профілі запуску `./dev` — у `scripts/runs/`.
 
 ### Правила залежностей
 - `core` не залежить ні від чого, крім GLM.
@@ -65,20 +65,23 @@
 - Глобальний стан заборонений, крім явно позначеного (`g_`).
 
 ## Команди
+Головний інструмент — `./dev` (`./dev help`). CI викликає ті самі команди.
 ```bash
-git submodule update --init --recursive --depth 1   # після клонування
-cmake --preset debug                       # конфігурація (Debug + validation layers)
-cmake --build --preset debug               # збирання
-ctest --preset debug                       # тести
-./build/debug/bin/sandbox --frames 120     # запуск sandbox на 120 кадрів
+./dev build [preset]          # configure за потреби + збирання (за замовчуванням debug)
+./dev test [preset]           # збирання + ctest
+./dev run [preset] -- --frames 120
+./dev smoke [preset]          # sandbox без дисплея; падає на [error] і [vulkan]-попередженнях
+./dev format | ./dev tidy     # clang-format / clang-tidy лише для engine/, apps/, tests/
+./dev ci                      # усе, що перевіряє CI — запускай перед комітом
+./dev p <profile>             # профілі запуску з scripts/runs/
 ```
-Пресети `ci-debug` і `ci-release` збирають так само, як CI (попередження = помилки). Подробиці — у скілі `/build-test`.
+Пресети `ci-debug` і `ci-release` збирають так само, як CI (попередження = помилки). Без скрипта: `cmake --preset debug`, `cmake --build --preset debug`, `ctest --preset debug`. Подробиці — у скілі `/build-test`.
 
-## Git і GitHub
-- Гілки: `main` — стабільна; `dev` — інтеграційна; `feature/<коротко>` — робочі гілки. Злиття — через Pull Request у `dev`.
-- CI (`.github/workflows/ci.yml`) має бути зеленим перед злиттям.
-- Коміти англійською в наказовому способі: "Add swapchain recreation".
-- Реліз: тег `vX.Y.Z` запускає `.github/workflows/release.yml` (чернетка GitHub Release).
+## Git і GitHub (подробиці — `CONTRIBUTING.md`)
+- Гілки: `main` — лише релізи (з тегами); `dev` — інтеграційна і за замовчуванням; `feature/<коротко>` → PR у `dev` (squash); `release/X.Y.Z` з `dev` → PR у `main` (merge commit) → тег → back-merge `main` у `dev`; `hotfix/X.Y.Z` з `main` → `main`.
+- У `main`, `dev`, `release/*` — лише через PR із зеленою перевіркою `ci-ok` (rulesets, `scripts/github/setup-repo.sh`).
+- Коміти англійською в наказовому способі, з великої літери, ≤ 72 символів: "Add swapchain recreation". Зміни у `vendor/` — окремими комітами `vendor(<lib>): ...`. Перевіряє хук `.githooks/commit-msg`.
+- Реліз: тег `vX.Y.Z` на `main` (має збігатися з `VERSION` у `CMakeLists.txt`) запускає `release.yml` (чернетка GitHub Release). Новини — у `CHANGELOG.md`.
 
 ## Скіли
 ### Скіли проєкту (головні правила)
@@ -86,7 +89,7 @@ ctest --preset debug                       # тести
 - `/vulkan-renderer` — правила Vulkan-коду і наступні кроки рендерера.
 - `/shader-pipeline` — шейдери, `advent_compile_shaders`, дескриптори.
 - `/skeletal-animation` — glTF через cgltf, скелет, анімації, скінінг.
-- `/build-test` — збирання, тести, CI, submodules.
+- `/build-test` — збирання, тести, CI, `./dev`, бібліотеки у `vendor/`.
 - `/adr` — фіксація архітектурних рішень (`docs/adr/`).
 
 ### Сторонні скіли (перевірені, див. `.claude/third-party-skills/README_UA.md`)
@@ -99,13 +102,14 @@ ctest --preset debug                       # тести
 2. Скіли проєкту.
 3. Сторонні скіли — лише джерело концепцій. Приклади на GDScript, C#, TypeScript чи OpenGL-GLSL переноси на C++20 і Vulkan 1.3 за правилами проєкту, а не копіюй.
 
-Залежності додаються лише як git submodules, навіть якщо сторонній скіл радить FetchContent, Conan чи vcpkg.
+Залежності додаються лише як копії у `vendor/` (ADR 0005), навіть якщо сторонній скіл радить FetchContent, Conan чи vcpkg.
 
 ## Прийняті рішення (docs/adr/)
-- 0001 — залежності через git submodules, зафіксовані на тегах.
+- 0001 — залежності через git submodules (замінено 0005).
 - 0002 — набір бібліотек: GLFW, GLM, Vulkan-Headers, volk, VMA, stb, cgltf, nlohmann/json.
 - 0003 — стиль коду: snake_case, `namespace advent`.
 - 0004 — головний цикл з фіксованим кроком симуляції.
+- 0005 — залежності як копії у `vendor/`.
 
 ## Відкриті рішення (запитай перед вибором)
 - Організація сцени: простий граф сцени чи ECS (EnTT або власний).
@@ -114,7 +118,8 @@ ctest --preset debug                       # тести
 - Напрям осі Y і спосіб її інвертування в проєкції (див. `/vulkan-renderer`).
 
 ## Чого не робити
-- Не додавай залежності без запиту. Кожна нова бібліотека — це новий submodule і запис в ADR.
+- Не додавай залежності без запиту. Кожна нова бібліотека — це нова тека у `vendor/`, ціль у `vendor/CMakeLists.txt`, рядок у `vendor/README.md` і запис в ADR.
 - Не вимикай validation layers у Debug, щоб «прибрати помилки», — виправляй причину.
 - Не змінюй структуру модулів і правила залежностей без ADR.
-- Не копіюй сторонній код у репозиторій (стара версія мала 2 500 файлів бібліотек в історії Git — див. `docs/legacy-review.md`).
+- Не копіюй сторонній код поза `vendor/`. Правки у `vendor/` — окремими комітами з позначкою `// ADVENT PATCH:` і записом у `vendor/README.md`.
+- Не форматуй і не лінтуй `vendor/`.

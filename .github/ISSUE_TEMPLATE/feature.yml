@@ -1,0 +1,26 @@
+name: Задача / можливість
+description: Нова можливість рушія або крок дорожньої карти
+labels: [feature]
+body:
+  - type: dropdown
+    id: module
+    attributes:
+      label: Модуль
+      options: [core, platform, renderer, runtime, assets, animation, scene, apps/sandbox, інструменти / CI]
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Мета
+      description: Що має з'явитися і навіщо (етап дорожньої карти з README).
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Критерії готовності
+      placeholder: |
+        - [ ] збирається в ci-debug без попереджень
+        - [ ] є тест
+        - [ ] sandbox показує результат

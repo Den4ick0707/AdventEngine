@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Forwards to Git LFS (core.hooksPath points here, so git-lfs cannot install its own hooks).
+command -v git-lfs >/dev/null 2>&1 || exit 0
+exec git lfs post-commit "$@"

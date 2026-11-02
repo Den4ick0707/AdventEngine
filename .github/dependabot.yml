@@ -1,0 +1,15 @@
+# Keeps GitHub Actions versions up to date. Libraries in vendor/ are plain copies (ADR 0005)
+# and are updated manually with `./dev vendor-update`.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: monthly
+    labels: [ci, dependencies]
+    commit-message:
+      prefix: CI
+    groups:
+      actions:
+        patterns: ['*']

@@ -5,7 +5,7 @@ description: Імпорт 3D-моделей glTF 2.0 через cgltf (меші,
 
 # Імпорт моделей і скелетна анімація
 
-Головна вимога курсового. Формат — **glTF 2.0** (`.gltf` + `.bin` або `.glb`), бібліотека — **cgltf**: ціль `advent::cgltf`, реалізація вже скомпільована в `third_party/impl/cgltf_impl.c`. Текстури завантажуються через **stb_image** (`advent::stb`).
+Головна вимога курсового. Формат — **glTF 2.0** (`.gltf` + `.bin` або `.glb`), бібліотека — **cgltf**: ціль `advent::cgltf`, реалізація вже скомпільована в `vendor/impl/cgltf_impl.c`. Текстури завантажуються через **stb_image** (`advent::stb`).
 
 ## Розподіл відповідальності (модулі ще треба створити скілом /engine-module)
 - `assets` (`PRIVATE advent::cgltf advent::stb`) перетворює файл на CPU-структури: `MeshData`, `SkeletonData`, `AnimationClipData`, `MaterialData`, `ImageData`. Про Vulkan нічого не знає. Типи cgltf не виходять за межі `src/`.

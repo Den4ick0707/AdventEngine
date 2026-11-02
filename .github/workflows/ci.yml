@@ -2,29 +2,33 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, 'release/**']
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, 'release/**']
   workflow_dispatch:
 
-# A new push to the same branch cancels the previous, now outdated run.
+# A new push to the same branch or PR cancels the previous, now outdated run.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 env:
+  # Same package list as `./dev setup --install` (minus the interactive tools).
   LINUX_PACKAGES: >-
     ninja-build pkg-config
     libwayland-dev libxkbcommon-dev wayland-protocols xorg-dev
     glslc mesa-vulkan-drivers vulkan-validationlayers xvfb
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
 
 jobs:
   linux:
     name: Linux / ${{ matrix.compiler }} / ${{ matrix.preset }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -37,41 +41,45 @@ jobs:
       CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends $LINUX_PACKAGES
 
-      - name: Configure
-        run: cmake --preset ${{ matrix.preset }}
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: linux-${{ matrix.compiler }}-${{ matrix.preset }}
 
-      - name: Build
-        run: cmake --build --preset ${{ matrix.preset }}
-
-      - name: Unit tests
-        run: ctest --preset ${{ matrix.preset }}
+      - name: Build and unit tests
+        run: ./dev test ${{ matrix.preset }}
 
       # Opens a real window on a virtual display and initializes Vulkan on the CPU (lavapipe).
-      # In Debug the validation layers are on, so Vulkan usage errors show up in this log.
-      - name: Smoke test (sandbox, 120 frames)
-        run: |
-          mkdir -p -m 700 "$RUNNER_TEMP/xdg"   # silences "XDG_RUNTIME_DIR is not set" from system libraries
-          XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg" xvfb-run -a ./build/${{ matrix.preset }}/bin/sandbox --frames 120
+      # Fails on any [error] line and on Vulkan validation warnings (validation is on in ci-debug).
+      - name: Smoke test (sandbox)
+        run: ./dev smoke ${{ matrix.preset }}
+
+      - name: Upload smoke log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-log-${{ matrix.compiler }}-${{ matrix.preset }}
+          path: build/${{ matrix.preset }}/smoke.log
+          if-no-files-found: ignore
 
   windows:
     name: Windows / MSVC / ${{ matrix.preset }}
     runs-on: windows-2022
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         preset: [ci-debug, ci-release]
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ''
+      CMAKE_CXX_COMPILER_LAUNCHER: ''
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       # Puts cl.exe, the Windows SDK and Ninja on PATH for the Ninja-based presets.
       - uses: ilammy/msvc-dev-cmd@v1
@@ -91,13 +99,15 @@ jobs:
   lint:
     name: clang-format / clang-tidy
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
       CC: clang
       CXX: clang++
+      # No compilation here; keep ccache out of compile_commands.json for clang-tidy.
+      CMAKE_C_COMPILER_LAUNCHER: ''
+      CMAKE_CXX_COMPILER_LAUNCHER: ''
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install dependencies
         run: |
@@ -105,12 +115,25 @@ jobs:
           sudo apt-get install -y --no-install-recommends $LINUX_PACKAGES clang-format-18 clang-tidy-18
 
       - name: clang-format
-        run: |
-          git ls-files 'engine/*.cpp' 'engine/*.hpp' 'apps/*.cpp' 'apps/*.hpp' 'tests/*.cpp' 'tests/*.hpp' \
-            | xargs clang-format-18 --dry-run --Werror
+        run: ./dev format --check
 
       - name: clang-tidy
+        run: ./dev tidy ci-debug
+
+  # The only check that branch rulesets require (see scripts/github/setup-repo.sh).
+  # Add new jobs to `needs` and they become required automatically.
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [linux, windows, lint]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: All jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          cmake --preset ci-debug
-          git ls-files 'engine/*.cpp' 'apps/*.cpp' 'tests/*.cpp' \
-            | xargs clang-tidy-18 -p build/ci-debug --quiet --warnings-as-errors='*'
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = "success" ] || { echo "::error::A required job did not succeed"; exit 1; }
+          done

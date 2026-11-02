@@ -23,7 +23,7 @@ GLFW 3.4, GLM 1.0.3, Vulkan-Headers і volk (обидва vulkan-sdk-1.4.363.0),
 
 Деталі підключення:
 - Header-only бібліотеки підключаються як власні INTERFACE-цілі (`advent::glm`, `advent::vma`, `advent::json`). Так ми контролюємо макроси: у старій версії GLM примусово вмикав AVX2 на будь-якому процесорі.
-- Реалізації stb і cgltf компілюються один раз у `third_party/impl/`.
+- Реалізації stb і cgltf компілюються один раз у `vendor/impl/` (до ADR 0005 — `third_party/impl/`).
 - VMA компілюється в `engine/renderer/src/vma_impl.cpp` і бере функції Vulkan з volk (`vmaImportVulkanFunctionsFromVolk`).
 - GLFW збирається статично (`BUILD_SHARED_LIBS OFF`), тож не потрібно копіювати DLL поруч з exe.
 - Для JSON вимкнено неявні перетворення (`JSON_USE_IMPLICIT_CONVERSIONS=0`) однаково в Debug і Release.

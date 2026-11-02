@@ -1,0 +1,36 @@
+name: Помилка
+description: Щось не збирається, падає або працює неправильно
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Що сталося
+      description: Що ви робили, що очікували і що отримали.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Як відтворити
+      placeholder: |
+        ./dev build debug
+        ./dev run
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Лог
+      description: Вивід sandbox або компілятора (рядки з [error] і [vulkan] особливо важливі).
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: Середовище
+      placeholder: Ubuntu 24.04, GCC 13, NVIDIA RTX 3060, драйвер 550
+  - type: input
+    id: commit
+    attributes:
+      label: Гілка / коміт
+      placeholder: dev @ 1a2b3c4

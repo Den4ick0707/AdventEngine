@@ -9,7 +9,7 @@
 
 | Етап | Результат | Стан |
 |------|-----------|------|
-| 1. Каркас | CMake-пресети, submodules, CI, `core` (лог, assert, час кадру), вікно GLFW | ✅ |
+| 1. Каркас | CMake-пресети, `vendor/`, CI, `./dev`, `core` (лог, assert, час кадру), вікно GLFW, sandbox | ✅ |
 | 2. Vulkan-основа | instance, device, VMA ✅ · swapchain, очищення екрана ⬜ | 🟡 |
 | 3. Перший трикутник | шейдери, пайплайн, вершинний буфер | ⬜ |
 | 4. 3D | камера, depth buffer, uniform-буфери, куб, що обертається | ⬜ |
@@ -28,27 +28,35 @@
 
 Потрібна відеокарта з підтримкою **Vulkan 1.3** — це більшість GPU NVIDIA, AMD та Intel останніх поколінь з оновленим драйвером. Перевірити можна командою `vulkaninfo --summary` з Vulkan SDK.
 
-## Швидкий старт
+## Швидкий старт (Linux)
 
 ```bash
 git clone https://github.com/Den4ick0707/AdventEngine.git
 cd AdventEngine
-git submodule update --init --recursive --depth 1
-git lfs install
+./dev setup --install    # системні пакети, git-хуки, налаштування git (один раз)
+./dev build              # Debug + validation layers
+./dev test               # модульні тести
+./dev run                # sandbox
+```
 
+Усі бібліотеки вже лежать у `vendor/`, тож після клонування проєкт збирається без інтернету.
+`./dev help` показує всі команди, `./dev profiles` — готові профілі запуску (gdb, ASan, Release…).
+Як працювати з гілками, комітами й релізами — у [CONTRIBUTING.md](CONTRIBUTING.md).
+
+### Без скрипта (Windows або вручну)
+
+```bash
 cmake --preset debug
 cmake --build --preset debug
 ctest --preset debug
 ./build/debug/bin/sandbox          # Windows: build\debug\bin\sandbox.exe
 ```
 
-`--depth 1` завантажує лише потрібні версії бібліотек (~35 МБ) замість їхньої повної історії (~370 МБ). Тому не використовуйте `git clone --recursive`: так Git завантажить усю історію бібліотек.
-
 ### CLion
 1. **File → Open** і оберіть теку проєкту. CLion сам підхопить `CMakePresets.json`.
 2. **Settings → Build, Execution, Deployment → Toolchains:** на Windows оберіть **Visual Studio** (архітектура `amd64`).
 3. **Settings → … → CMake:** увімкніть профілі `debug` і `release` (Enable profile), а стандартний `Debug` вимкніть.
-4. Оберіть конфігурацію `sandbox` і запустіть її.
+4. Оберіть конфігурацію `sandbox` і запустіть її. Команди `./dev` доступні як готові конфігурації в теці `dev` (`.run/`).
 
 ### Пресети
 
@@ -56,6 +64,7 @@ ctest --preset debug
 |--------|-------------|
 | `debug` | Debug, Vulkan validation layers, `ADVENT_ASSERT` |
 | `release` | Release |
+| `relwithdebinfo` | Release з налагоджувальною інформацією (профілювання) |
 | `asan` | Debug + AddressSanitizer/UBSan (Linux) |
 | `ci-debug`, `ci-release` | Як у CI: попередження = помилки |
 
@@ -69,15 +78,19 @@ engine/
   runtime/     Application: головний цикл, модулі
 apps/sandbox/  демо-застосунок
 tests/         модульні тести (CTest)
-third_party/   залежності (git submodules) + CMakeLists.txt з їхніми цілями
+vendor/        копії сторонніх бібліотек + CMakeLists.txt з їхніми цілями (ADR 0005)
 cmake/         попередження компілятора, компіляція шейдерів
+scripts/       профілі запуску для ./dev (runs/), налаштування GitHub (github/)
 docs/adr/      архітектурні рішення
+dev            інструмент розробника: ./dev help
+.githooks/     git-хуки (вмикає ./dev setup)
+.run/          конфігурації запуску CLion
 .claude/       скіли Claude Code; CLAUDE.md — правила проєкту для Claude
 ```
 
 ## Залежності
 
-Усі залежності підключені як git submodules і зафіксовані на тегах (`third_party/`):
+Усі залежності лежать копіями у `vendor/` ([ADR 0005](docs/adr/0005-vendored-dependencies.md)): збираються офлайн, їх можна правити. Версії й локальні правки — у [vendor/README.md](vendor/README.md).
 
 | Бібліотека | Версія | Призначення |
 |------------|--------|-------------|
@@ -92,12 +105,12 @@ docs/adr/      архітектурні рішення
 
 ## Розробка
 
-- **Гілки:** `main` — стабільна, `dev` — інтеграційна, `feature/*` — робочі. Злиття в `dev` йде через Pull Request із зеленим CI.
+- **Гілки:** `main` — лише релізи, `dev` — інтеграційна (за замовчуванням), `feature/*` → `dev`, `release/X.Y.Z` і `hotfix/X.Y.Z` → `main`. Усе через Pull Request із зеленою перевіркою `ci-ok`. Подробиці — [CONTRIBUTING.md](CONTRIBUTING.md).
 - **CI:**
   - Linux (GCC і Clang) і Windows (MSVC): збирання, тести;
-  - smoke-запуск sandbox з програмним Vulkan;
+  - smoke-запуск sandbox з програмним Vulkan (падає на помилках validation layers);
   - перевірки `clang-format` і `clang-tidy`.
-- **Реліз:** `git tag v0.1.0 && git push origin v0.1.0` створює чернетку GitHub Release з архівами для Windows і Linux.
+- **Реліз:** тег `vX.Y.Z` на `main` створює чернетку GitHub Release з архівами для Windows і Linux (див. CONTRIBUTING.md).
 - **Стиль:** `.clang-format` і `.clang-tidy`, правила описані в [CLAUDE.md](CLAUDE.md).
 - **Рішення:** [docs/adr](docs/adr/README.md).
 - **Claude Code:** запускайте `claude` з кореня проєкту; правила й скіли підхопляться автоматично.

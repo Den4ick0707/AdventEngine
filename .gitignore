@@ -6,7 +6,7 @@ out/
 # CMake (personal presets stay local)
 CMakeUserPresets.json
 
-# IDEs
+# IDEs (shared CLion run configurations live in .run/ and are committed)
 .idea/
 .vs/
 .vscode/
@@ -15,6 +15,9 @@ CMakeUserPresets.json
 # Claude Code: personal settings and notes stay local; CLAUDE.md and .claude/skills are shared
 .claude/settings.local.json
 CLAUDE.local.md
+
+# Personal run profiles for ./dev (see scripts/runs/_template.sh)
+scripts/runs/local/
 
 # Compiled shaders, captures, logs
 *.spv
