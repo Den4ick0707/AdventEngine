@@ -8,11 +8,11 @@ description: Збирання AdventEngine через CMake-пресети, за
 ## Перший запуск після клонування
 ```bash
 git clone <url> && cd <repo>
-./dev setup --install    # apt-пакети (Ubuntu/Debian), git-хуки, налаштування git
+./dev setup --install    # системні пакети (apt / pacman / dnf / zypper), git-хуки, налаштування git
 ./dev build
 ```
 Бібліотеки вже лежать у `vendor/` (ADR 0005): ні submodules, ні мережа для збирання не потрібні.
-Що потрібно встановити (на Linux це робить `./dev setup --install`):
+Що потрібно встановити (на Linux це робить `./dev setup --install`: Ubuntu/Debian, Arch/Manjaro, Fedora, openSUSE):
 - **Vulkan SDK** або пакети `glslc`, `vulkan-validationlayers`;
 - **CMake ≥ 3.25** і **Ninja**;
 - компілятор з C++20: **MSVC 2022**, **GCC 13+** або **Clang 17+**;
