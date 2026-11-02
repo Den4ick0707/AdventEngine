@@ -5,7 +5,7 @@
 ```bash
 git clone https://github.com/Den4ick0707/AdventEngine.git
 cd AdventEngine
-./dev setup --install    # apt-пакети, git-хуки, налаштування git для репозиторію
+./dev setup --install    # системні пакети (apt, pacman, dnf, zypper), git-хуки, налаштування git
 ./dev build && ./dev run
 ```
 

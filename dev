@@ -11,12 +11,32 @@ DEFAULT_PRESET="${ADVENT_PRESET:-debug}"
 RUNS_DIR="$ROOT/scripts/runs"
 SMOKE_FRAMES="${ADVENT_SMOKE_FRAMES:-120}"
 
-# Packages for Ubuntu/Debian (same list as CI).
+# System packages per distro family. Ubuntu/Debian is the list CI uses; the others are equivalents.
 APT_PACKAGES=(
     build-essential cmake ninja-build pkg-config git git-lfs
     libwayland-dev libxkbcommon-dev wayland-protocols xorg-dev
     glslc vulkan-tools vulkan-validationlayers mesa-vulkan-drivers
     clang-format clang-tidy xvfb gdb
+)
+PACMAN_PACKAGES=(
+    base-devel cmake ninja pkgconf git git-lfs
+    wayland libxkbcommon wayland-protocols libx11 libxrandr libxinerama libxcursor libxi
+    shaderc vulkan-tools vulkan-validation-layers vulkan-icd-loader vulkan-swrast
+    clang xorg-server-xvfb gdb
+)
+DNF_PACKAGES=(
+    gcc-c++ make cmake ninja-build pkgconf-pkg-config git git-lfs
+    wayland-devel libxkbcommon-devel wayland-protocols-devel
+    libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
+    glslc vulkan-tools vulkan-validation-layers vulkan-loader mesa-vulkan-drivers
+    clang-tools-extra xorg-x11-server-Xvfb gdb
+)
+ZYPPER_PACKAGES=(
+    gcc-c++ make cmake ninja pkg-config git git-lfs
+    wayland-devel libxkbcommon-devel wayland-protocols-devel
+    libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
+    shaderc vulkan-tools vulkan-validationlayers libvulkan1 libvulkan_lvp
+    clang-tools xvfb-run gdb
 )
 
 # ---------------------------------------------------------------------------
@@ -88,7 +108,7 @@ ${c_bold}AdventEngine dev tool${c_reset}   ./dev <command> [args]
 
 Setup
   setup [--install]           check tools, enable git hooks and repo git settings
-                              (--install: apt-get install the missing packages)
+                              (--install: install packages via apt, pacman, dnf or zypper)
 
 Build & test                  [preset] defaults to \$ADVENT_PRESET or "debug"
   configure [preset]          cmake --preset
@@ -115,17 +135,37 @@ Presets: debug, release, relwithdebinfo, asan, ci-debug, ci-release
 EOF
 }
 
+# Installs the system packages with the distro's package manager (apt, pacman, dnf or zypper).
+install_packages() {
+    local sudo=""
+    [[ $EUID -ne 0 ]] && sudo="sudo"
+    local distro="unknown"
+    [[ -r /etc/os-release ]] && distro="$(. /etc/os-release && echo "${PRETTY_NAME:-$ID}")"
+
+    if has apt-get; then
+        step "install packages: apt ($distro)"
+        $sudo apt-get update
+        $sudo apt-get install -y --no-install-recommends "${APT_PACKAGES[@]}"
+    elif has pacman; then
+        step "install packages: pacman ($distro)"
+        $sudo pacman -Syu --needed --noconfirm "${PACMAN_PACKAGES[@]}"
+    elif has dnf; then
+        step "install packages: dnf ($distro)"
+        $sudo dnf install -y "${DNF_PACKAGES[@]}"
+    elif has zypper; then
+        step "install packages: zypper ($distro)"
+        $sudo zypper --non-interactive install "${ZYPPER_PACKAGES[@]}"
+    else
+        die "no supported package manager (apt, pacman, dnf, zypper) on $distro. Install the equivalents of: ${APT_PACKAGES[*]}"
+    fi
+}
+
 cmd_setup() {
     local install=0
     [[ "${1:-}" == "--install" ]] && install=1
 
     if ((install)); then
-        has apt-get || die "--install supports apt-based distros only. Install manually: ${APT_PACKAGES[*]}"
-        step "apt-get install"
-        local sudo=""
-        [[ $EUID -ne 0 ]] && sudo="sudo"
-        $sudo apt-get update
-        $sudo apt-get install -y --no-install-recommends "${APT_PACKAGES[@]}"
+        install_packages
     fi
 
     step "tools"
