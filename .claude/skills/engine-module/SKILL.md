@@ -48,7 +48,7 @@ advent_set_warnings(advent_<module>)   # cmake/AdventWarnings.cmake
 - Публічні заголовки підключаються як `#include <advent/<module>/foo.hpp>`; `#pragma once`.
 - Кожен заголовок сам підключає все, що використовує (PCH немає).
 - Залежність `PUBLIC` — лише якщо її типи з'являються в публічних заголовках, інакше `PRIVATE`.
-- Сторонні бібліотеки підключай через цілі з `third_party/CMakeLists.txt` (`advent::glm`, `advent::stb`, `advent::cgltf`, `advent::json`, `glfw`, `advent::volk`, `advent::vma`).
+- Сторонні бібліотеки підключай через цілі з `vendor/CMakeLists.txt` (`advent::glm`, `advent::stb`, `advent::cgltf`, `advent::json`, `glfw`, `advent::volk`, `advent::vma`).
 - Vulkan-типи дозволені лише в `renderer`; GLFW — лише в `platform` і (приватно) `renderer`.
 - Код у `namespace advent::<module>`; для `core` — просто `advent`.
 - Додай `add_subdirectory(<module>)` в `engine/CMakeLists.txt` з урахуванням порядку залежностей і прибери модуль зі списку «Planned modules» там.
