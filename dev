@@ -157,8 +157,9 @@ cmd_setup() {
     git config push.autoSetupRemote true
     ok "pull.rebase, fetch.prune, push.autoSetupRemote"
     if has git-lfs; then
-        git lfs install --local >/dev/null
-        ok "git lfs (assets/)"
+        # Hooks are not installed by git-lfs: .githooks/ already forwards to it.
+        git lfs install --local --skip-repo >/dev/null
+        ok "git lfs filters (assets/); LFS hooks are part of .githooks/"
     fi
 
     if ((missing)); then
@@ -347,9 +348,10 @@ cmd_vendor_update() {
 
     local tmp
     tmp="$(mktemp -d)"
-    trap 'rm -rf "$tmp"' EXIT
+    # shellcheck disable=SC2064 # expand now: $tmp is local and gone when the EXIT trap runs
+    trap "rm -rf '$tmp'" EXIT
     step "download $url @ $tag"
-    git clone --quiet --depth 1 --branch "$tag" "$url" "$tmp/$dir"
+    git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$tag" "$url" "$tmp/$dir"
     rm -rf "$tmp/$dir/.git"
     rm -rf "vendor/$dir"
     mv "$tmp/$dir" "vendor/$dir"
