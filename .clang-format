@@ -1,0 +1,39 @@
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 120
+AccessModifierOffset: -4
+
+# Pointers stick to the type: int* pointer;
+PointerAlignment: Left
+
+AlignConsecutiveAssignments: true
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterEnum: true
+  AfterControlStatement: false
+  BeforeElse: false
+  SplitEmptyFunction: false
+
+# Never squeeze if statements and loops into one line.
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+# One-line bodies only for small getters defined inside a class.
+AllowShortFunctionsOnASingleLine: InlineOnly
+
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
+AlwaysBreakTemplateDeclarations: Yes
+
+IncludeBlocks: Preserve
+MaxEmptyLinesToKeep: 1

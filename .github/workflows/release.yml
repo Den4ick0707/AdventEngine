@@ -1,0 +1,81 @@
+name: Release
+
+# Push a version tag to build Release binaries and open a draft GitHub Release:
+#   git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build / ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux,   os: ubuntu-24.04 }
+          - { name: windows, os: windows-2022 }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build pkg-config \
+            libwayland-dev libxkbcommon-dev wayland-protocols xorg-dev glslc
+
+      - name: Set up MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure
+        run: cmake --preset ci-release
+
+      - name: Build
+        run: cmake --build --preset ci-release
+
+      - name: Unit tests
+        run: ctest --preset ci-release
+
+      - name: Package
+        shell: bash
+        run: |
+          package="AdventEngine-${GITHUB_REF_NAME}-${{ matrix.name }}"
+          mkdir -p "$package"
+          cp -r build/ci-release/bin/. "$package/"
+          cp LICENSE README.md "$package/"
+          cmake -E tar cf "$package.zip" --format=zip "$package"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.name }}
+          path: AdventEngine-*.zip
+          if-no-files-found: error
+
+  publish:
+    name: Draft GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: AdventEngine ${{ github.ref_name }}
+          body: Автоматична збірка AdventEngine. Завантажте архів для своєї ОС.
+          files: AdventEngine-*.zip

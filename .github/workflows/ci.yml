@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+# A new push to the same branch cancels the previous, now outdated run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  LINUX_PACKAGES: >-
+    ninja-build pkg-config
+    libwayland-dev libxkbcommon-dev wayland-protocols xorg-dev
+    glslc mesa-vulkan-drivers vulkan-validationlayers xvfb
+
+jobs:
+  linux:
+    name: Linux / ${{ matrix.compiler }} / ${{ matrix.preset }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { compiler: gcc,   cc: gcc,   cxx: g++,     preset: ci-debug }
+          - { compiler: gcc,   cc: gcc,   cxx: g++,     preset: ci-release }
+          - { compiler: clang, cc: clang, cxx: clang++, preset: ci-debug }
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends $LINUX_PACKAGES
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Unit tests
+        run: ctest --preset ${{ matrix.preset }}
+
+      # Opens a real window on a virtual display and initializes Vulkan on the CPU (lavapipe).
+      # In Debug the validation layers are on, so Vulkan usage errors show up in this log.
+      - name: Smoke test (sandbox, 120 frames)
+        run: |
+          mkdir -p -m 700 "$RUNNER_TEMP/xdg"   # silences "XDG_RUNTIME_DIR is not set" from system libraries
+          XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg" xvfb-run -a ./build/${{ matrix.preset }}/bin/sandbox --frames 120
+
+  windows:
+    name: Windows / MSVC / ${{ matrix.preset }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [ci-debug, ci-release]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Puts cl.exe, the Windows SDK and Ninja on PATH for the Ninja-based presets.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      # No GPU on Windows runners, so only unit tests run here.
+      - name: Unit tests
+        run: ctest --preset ${{ matrix.preset }}
+
+  lint:
+    name: clang-format / clang-tidy
+    runs-on: ubuntu-24.04
+    env:
+      CC: clang
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends $LINUX_PACKAGES clang-format-18 clang-tidy-18
+
+      - name: clang-format
+        run: |
+          git ls-files 'engine/*.cpp' 'engine/*.hpp' 'apps/*.cpp' 'apps/*.hpp' 'tests/*.cpp' 'tests/*.hpp' \
+            | xargs clang-format-18 --dry-run --Werror
+
+      - name: clang-tidy
+        run: |
+          cmake --preset ci-debug
+          git ls-files 'engine/*.cpp' 'apps/*.cpp' 'tests/*.cpp' \
+            | xargs clang-tidy-18 -p build/ci-debug --quiet --warnings-as-errors='*'
