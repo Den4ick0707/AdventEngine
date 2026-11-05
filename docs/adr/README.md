@@ -29,3 +29,4 @@
 | [0021](0021-renderer.md) | Рендерер: bindless, простий render graph, deferred, compute-скінінг, гібрид і path tracer, GLSL, системи координат | Accepted |
 | [0022](0022-serialization.md) | Серіалізація: рефлексія полів, сцени в JSON, версії компонентів і міграції | Accepted |
 | [0023](0023-editor-ui.md) | UI редактора — Dear ImGui (docking); редактор відкладено до завершення трасування | Accepted |
+| [0024](0024-testing.md) | Тестування: doctest, один виконуваний файл тестів на модуль | Accepted |
