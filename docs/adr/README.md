@@ -24,3 +24,11 @@
 | [0016](0016-frame-phases-and-systems.md) | Фази кадру і системи модулів з явним порядком | Accepted |
 | [0017](0017-module-manifest.md) | Маніфест модуля `module.json`, виявлення і розривання циклів залежностей | Accepted |
 | [0018](0018-scene-archetype-ecs.md) | Сцена: власна archetype ECS (таблиці, `CommandBuffer`, sparse-компоненти), ієрархія і трансформації | Accepted |
+| [0019](0019-assets.md) | Ассети: `.meta`-файли, імпорт джерел під час роботи, явний лічильник посилань, гаряче перезавантаження | Accepted |
+| [0020](0020-animation.md) | Анімація: поза — щільний масив, операції `sample`/`blend`, перша версія — кліп і crossfade | Accepted |
+| [0021](0021-renderer.md) | Рендерер: bindless, простий render graph, deferred, compute-скінінг, гібрид і path tracer, GLSL, системи координат | Accepted |
+| [0022](0022-serialization.md) | Серіалізація: рефлексія полів, сцени в JSON, версії компонентів і міграції | Accepted |
+| [0023](0023-editor-ui.md) | UI редактора — Dear ImGui (docking); редактор відкладено до завершення трасування | Accepted |
+| [0024](0024-testing.md) | Тестування: doctest, один виконуваний файл тестів на модуль | Accepted |
+| [0025](0025-physics.md) | Фізика: модуль-адаптер над Jolt (пізніше), інтерполяція через `PreviousTransform` | Accepted |
+| [0026](0026-distribution.md) | Розповсюдження: SemVer, `./dev package`, `./dev module`, GitHub Releases | Accepted |

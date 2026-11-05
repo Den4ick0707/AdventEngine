@@ -19,23 +19,18 @@ advent_compile_shaders(sandbox SOURCES ${PROJECT_SOURCE_DIR}/shaders/triangle.ve
 - Windows CI не має `glslc`. Коли з'являться перші шейдери, потрібно встановлення Vulkan SDK у
   `ci.yml` і `release.yml` — погодь з користувачем.
 
-## Дескриптори
-Організація (класичні набори чи bindless) — відкрите питання теми «Рендерер», вирішується через ADR.
-Тимчасова конвенція до рішення:
-
-| set | Дані | Частота |
-|-----|------|---------|
-| 0 | кадр: камера, світло, час | раз на кадр |
-| 1 | матеріал: текстури, параметри | на матеріал |
-| 2 | об'єкт: матриці суглобів (SSBO) | на об'єкт |
-
-- Push constants до 128 байт: матриця моделі, індекси.
-- Uniform — std140, SSBO — std430. C++-структури: `alignas(16)` і `static_assert(sizeof(T) == N)`.
+## Ресурси (bindless, ADR 0021)
+- Глобальні масиви текстур і семплерів, прив'язуються раз на кадр; доступ — `textures[nonuniformEXT(index)]`.
+- Дані кадру, матеріалів, об'єктів — буфери через `buffer device address` (`GL_EXT_buffer_reference`).
+- Push constants — лише індекси й адреси буферів, до 128 байт.
+- Спільний код (матеріали, освітлення, доступ до масивів) — лише в `shaders/common/`, не дублюється.
+- SSBO і буфери за адресою — std430. C++-структури: `alignas(16)` і `static_assert(sizeof(T) == N)`.
 
 ## Пайплайни
 - `VkPipelineRenderingCreateInfo` з форматами color і depth, `renderPass = VK_NULL_HANDLE`.
 - Dynamic state: щонайменше `VIEWPORT` і `SCISSOR`.
-- Окремі пайплайни для статичних і скінованих мешів. Створення — через builder у `renderer`.
+- Скінінг — compute-прохід, тож окремих пайплайнів для скінованих мешів немає. Створення — через builder у `renderer`.
+- Reverse-Z: `compareOp = GREATER`, глибина очищається в 0.
 
 ## Перевірка
 - `glslc` без попереджень, validation без помилок інтерфейсу шейдерів і дескрипторів.
