@@ -38,7 +38,8 @@ description: Правила Vulkan-коду AdventEngine — VulkanContext, volk
 ## Ресурси
 - Статичні буфери: staging (`VMA_MEMORY_USAGE_AUTO` + `HOST_ACCESS_SEQUENTIAL_WRITE`), копіювання в device-local.
 - Буфери, що змінюються щокадру: host-visible, постійно змаплені (`VMA_ALLOCATION_CREATE_MAPPED_BIT`).
-- Depth: `VK_FORMAT_D32_SFLOAT`; GLM налаштований на діапазон [0, 1].
+- Depth: `VK_FORMAT_D32_SFLOAT`, reverse-Z (ближня 1, дальня 0, `GREATER`); GLM з `GLM_FORCE_DEPTH_ZERO_TO_ONE`.
+- Проходи — через render graph: оголосити читання і запис, бар'єри ставить граф (ADR 0021).
 - Трасування променів: можливості `VK_KHR_acceleration_structure`, `VK_KHR_ray_tracing_pipeline`,
   `VK_KHR_ray_query` — необов'язкові. Коли вони є, вершинні й індексні буфери отримують
   `SHADER_DEVICE_ADDRESS` і `ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY`.
@@ -46,7 +47,7 @@ description: Правила Vulkan-коду AdventEngine — VulkanContext, volk
 ## Типові помилки
 - Зображення swapchain не переведене в `PRESENT_SRC_KHR`.
 - std140: `vec3` займає 16 байт; краще `vec4` або std430.
-- Вісь Y у Vulkan спрямована вниз. Спосіб інвертування — відкрите питання, вирішується через ADR.
+- Вісь Y у Vulkan спрямована вниз; інвертується від'ємною висотою viewport (ADR 0021).
 
 ## Перевірка
 - `./dev smoke ci-debug`: нуль `[vulkan:validation]`.

@@ -44,18 +44,17 @@ cgltf_validate(data);                           // у Debug
 4. Суглоби без каналів зберігають rest-трансформацію.
 5. `global[i] = global[parent[i]] * local[i]` у порядку масиву.
 6. `joint_matrix[i] = inverse(global_of_mesh_node) * global[i] * inverse_bind[i]`.
-7. Анімація оновлюється в `on_update(dt)`, не в `on_fixed_update`.
+7. Анімація — системи `animation.sample` і `animation.joints` у фазі `update` (ADR 0020), не `fixed_update`.
 
-## GPU-скінінг
+## GPU-скінінг (compute, ADR 0021)
+Прохід `skinning` на початку кадру пише деформовані вершини в буфер екземпляра; далі меш малюється як статичний,
+а `raytracing` оновлює з того ж буфера BLAS.
 ```glsl
-layout(set = 2, binding = 0) readonly buffer JointMatrices { mat4 joints[]; };
-
-mat4 skin = in_weights.x * joints[in_joints.x] + in_weights.y * joints[in_joints.y]
-          + in_weights.z * joints[in_joints.z] + in_weights.w * joints[in_joints.w];
-vec4 world_pos = model * skin * vec4(in_position, 1.0);
-vec3 world_nrm = normalize(mat3(model * skin) * in_normal);
+mat4 skin = w.x * joints[j.x] + w.y * joints[j.y] + w.z * joints[j.z] + w.w * joints[j.w];
+out_vertices[i].position = (skin * vec4(in_vertices[i].position, 1.0)).xyz;   // простір моделі
+out_vertices[i].normal   = normalize(mat3(skin) * in_vertices[i].normal);
 ```
-SSBO матриць — окремий на кожен кадр у польоті.
+Буфер `JointMatrices` — окремий на кожен кадр у польоті.
 
 ## Тестові моделі
 Khronos glTF-Sample-Assets у `assets/models/` (Git LFS), по порядку:
