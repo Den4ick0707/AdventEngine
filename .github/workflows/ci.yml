@@ -120,7 +120,7 @@ jobs:
       - name: clang-tidy
         run: ./dev tidy ci-debug
 
-  # The only check that branch rulesets require (see scripts/github/setup-repo.sh).
+  # The only check that branch rulesets require (Settings → Rules → Rulesets, see CONTRIBUTING.md).
   # Add new jobs to `needs` and they become required automatically.
   ci-ok:
     name: ci-ok

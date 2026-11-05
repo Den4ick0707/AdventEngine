@@ -79,7 +79,7 @@
 
 ## Git і GitHub (подробиці — `CONTRIBUTING.md`)
 - Гілки: `main` — лише релізи (з тегами); `dev` — інтеграційна і за замовчуванням; `feature/<коротко>` → PR у `dev` (squash); `release/X.Y.Z` з `dev` → PR у `main` (merge commit) → тег → back-merge `main` у `dev`; `hotfix/X.Y.Z` з `main` → `main`.
-- У `main`, `dev`, `release/*` — лише через PR із зеленою перевіркою `ci-ok` (rulesets, `scripts/github/setup-repo.sh`).
+- У `main`, `dev`, `release/*` — лише через PR із зеленою перевіркою `ci-ok` (rulesets, див. «Налаштування GitHub» у `CONTRIBUTING.md`).
 - Коміти англійською в наказовому способі, з великої літери, ≤ 72 символів: "Add swapchain recreation". Зміни у `vendor/` — окремими комітами `vendor(<lib>): ...`. Перевіряє хук `.githooks/commit-msg`.
 - Реліз: тег `vX.Y.Z` на `main` (має збігатися з `VERSION` у `CMakeLists.txt`) запускає `release.yml` (чернетка GitHub Release). Новини — у `CHANGELOG.md`.
 
