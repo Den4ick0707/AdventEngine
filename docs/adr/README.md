@@ -23,3 +23,4 @@
 | [0015](0015-module-communication.md) | Зв'язки модулів: залежності, сервіси, події-масиви із закладками, спільні дані | Accepted |
 | [0016](0016-frame-phases-and-systems.md) | Фази кадру і системи модулів з явним порядком | Accepted |
 | [0017](0017-module-manifest.md) | Маніфест модуля `module.json`, виявлення і розривання циклів залежностей | Accepted |
+| [0018](0018-scene-archetype-ecs.md) | Сцена: власна archetype ECS (таблиці, `CommandBuffer`, sparse-компоненти), ієрархія і трансформації | Accepted |
