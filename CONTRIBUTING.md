@@ -8,7 +8,15 @@
 
 - Кожна задача — issue на GitHub (шаблони «Помилка» і «Задача / можливість»).
 - Issue належить milestone — етапу з [плану розвитку](docs/roadmap.md).
-- Прогрес видно на дошці GitHub Projects: «Заплановано», «В роботі», «Готово».
+- Прогрес видно на дошці [GitHub Projects](https://github.com/users/Den4ick0707/projects) (шаблон Kanban):
+
+  | Колонка | Що в ній |
+  |---------|----------|
+  | Backlog | усі задачі, які колись треба зробити |
+  | Ready | наступні на черзі, зрозуміло, що робити |
+  | In progress | задача в роботі, є гілка |
+  | In review | відкритий Pull Request, чекає на `ci-ok` і злиття |
+  | Done | злито; issue переходить сюди автоматично |
 - Pull Request посилається на issue (`Closes #N`), і issue закривається автоматично після злиття.
 
 ## Гілки
@@ -106,4 +114,7 @@ git push origin v0.2.0                     # release.yml створює черн
 
 - **Мітки** — таблиця в розділі «Pull Request».
 - **Settings > Pages.** Source: GitHub Actions (публікація документації, `docs.yml`).
-- **Milestones і Projects** — етапи з [плану розвитку](docs/roadmap.md) і дошка задач.
+- **Milestones** — етапи з [плану розвитку](docs/roadmap.md).
+- **Projects.** Проєкт `AdventEngine` (шаблон Kanban), прив'язаний до репозиторію, default repository —
+  `AdventEngine`. Поля: Status, Priority, Size, Start date, Target date. Workflows: *Item closed* і
+  *Pull request merged* переводять у Done; *Auto-add to project* (`is:issue`) додає нові issues у Backlog.
