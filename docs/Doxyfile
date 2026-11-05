@@ -43,6 +43,7 @@ INPUT                  = README.md \
                          docs/architecture.md \
                          docs/roadmap.md \
                          docs/coding-style.md \
+                         docs/threading.md \
                          CONTRIBUTING.md \
                          docs/adr/README.md \
                          docs/adr \

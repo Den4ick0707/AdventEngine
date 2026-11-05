@@ -19,3 +19,4 @@
 | [0011](0011-logging.md) | Лог: категорії, кілька sink-ів, файл завжди, без виділень пам'яті | Accepted |
 | [0012](0012-virtual-file-system-and-projects.md) | Віртуальна файлова система, файл проєкту `.advent`, налаштування користувача | Accepted |
 | [0013](0013-input-layers.md) | Ввід: сирий стан пристроїв у platform, дії в модулі `input` | Accepted |
+| [0014](0014-single-threaded-frame.md) | Потоки: однопотоковий кадр зараз, система задач пізніше | Accepted |
