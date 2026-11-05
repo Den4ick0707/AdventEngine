@@ -33,7 +33,7 @@ git clone <url> && cd <repo>
 ./dev build debug sandbox                 # = cmake --build --preset debug --target sandbox
 ./dev test debug                          # = збирання + ctest --preset debug
 ./dev run debug -- --frames 120           # вийти після 120 кадрів
-./dev smoke ci-debug                      # як у CI: без дисплея (xvfb), падає на [error] / [vulkan] warn
+./dev smoke ci-debug                      # як у CI: без дисплея (xvfb), падає на [error] / [vulkan:validation|performance] warn
 ./dev p <profile>                         # профілі з scripts/runs/ (gdb, asan, release, ...)
 ```
 Новий спеціальний запуск — новий профіль: `./dev new-profile <name>` (особистий, у `scripts/runs/local/`)
@@ -58,7 +58,11 @@ git clone <url> && cd <repo>
 Якщо CI впав, відкрий лог кроку і відтвори його локально тим самим пресетом. Помилки Linux-збірки на Windows можна перевірити через WSL.
 
 ## Validation layers
-- Повідомлення йдуть у лог з префіксом `[vulkan]`. Мета для Debug — **нуль** warn і error.
+- Повідомлення йдуть у лог з префіксом `[vulkan:<джерело>]`:
+  - `validation` — неправильне використання API, тобто помилка в нашому коді;
+  - `performance` — неоптимальне використання;
+  - `general` — завантажувач і драйвери, напр. `Skipping this driver` для ICD, що не підходить машині (Mesa Dozen `libvulkan_dzn.so` поза WSL). Це не помилка коду.
+- Мета для Debug — **нуль** error і нуль `validation`/`performance` warn. `./dev smoke` падає саме на них.
 - `VUID-...` з повідомлення шукай у специфікації Vulkan.
 - Якщо layers не встановлені, рушій попереджає й працює без них. Встанови Vulkan SDK.
 

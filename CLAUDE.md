@@ -70,7 +70,7 @@
 ./dev build [preset]          # configure за потреби + збирання (за замовчуванням debug)
 ./dev test [preset]           # збирання + ctest
 ./dev run [preset] -- --frames 120
-./dev smoke [preset]          # sandbox без дисплея; падає на [error] і [vulkan]-попередженнях
+./dev smoke [preset]          # sandbox без дисплея; падає на [error] і [vulkan:validation|performance]-попередженнях
 ./dev format | ./dev tidy     # clang-format / clang-tidy лише для engine/, apps/, tests/
 ./dev ci                      # усе, що перевіряє CI — запускай перед комітом
 ./dev p <profile>             # профілі запуску з scripts/runs/

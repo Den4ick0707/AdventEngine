@@ -11,7 +11,9 @@ cd AdventEngine
 
 `./dev setup` без `--install` лише перевіряє інструменти й вмикає хуки. Повторний запуск безпечний.
 
+## Налаштування GitHub
 
+Зроблені вручну один раз. Якщо репозиторій доведеться налаштовувати заново, ось що має бути:
 
 - **Settings → General:** гілка за замовчуванням `dev`; увімкнено merge commits і squash (назва коміту — з назви й опису PR),
   rebase вимкнено; увімкнено *Always suggest updating PR branches*, *Allow auto-merge*, *Automatically delete head branches*.
@@ -99,7 +101,7 @@ gh pr create --base dev --head main --title "Merge main into dev after 0.2.0"
 |---------|-----------|
 | `./dev format` | форматує `engine/`, `apps/`, `tests/` (`clang-format`) |
 | `./dev test ci-debug` | збирання з попередженнями як помилками + модульні тести |
-| `./dev smoke ci-debug` | sandbox на віртуальному дисплеї; падає на `[error]` і попередженнях validation layers |
+| `./dev smoke ci-debug` | sandbox на віртуальному дисплеї; падає на `[error]` і попередженнях `[vulkan:validation]` / `[vulkan:performance]` |
 | `./dev tidy` | `clang-tidy`, зокрема стиль імен |
 | `./dev ci` | усе разом, як у CI |
 
