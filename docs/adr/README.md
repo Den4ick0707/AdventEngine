@@ -17,3 +17,5 @@
 | [0009](0009-identifiers.md) | Ідентифікатори: handles, UUID 128 біт, `StringId` | Accepted |
 | [0010](0010-error-handling.md) | Помилки: винятки при запуску, `Result<T>` у роботі, `ADVENT_ASSERT` | Accepted |
 | [0011](0011-logging.md) | Лог: категорії, кілька sink-ів, файл завжди, без виділень пам'яті | Accepted |
+| [0012](0012-virtual-file-system-and-projects.md) | Віртуальна файлова система, файл проєкту `.advent`, налаштування користувача | Accepted |
+| [0013](0013-input-layers.md) | Ввід: сирий стан пристроїв у platform, дії в модулі `input` | Accepted |
