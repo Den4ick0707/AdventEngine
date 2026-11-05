@@ -22,9 +22,9 @@ struct Extent
     std::uint32_t height = 0;
 };
 
-// OS window backed by GLFW. Created without an OpenGL context (GLFW_NO_API) for Vulkan.
-// GLFW is initialized with the first window and terminated with the last one.
-// Must be created and used on the main thread.
+/// OS window backed by GLFW. Created without an OpenGL context (GLFW_NO_API) for Vulkan.
+/// GLFW is initialized with the first window and terminated with the last one.
+/// Must be created and used on the main thread.
 class Window
 {
 public:
@@ -38,7 +38,7 @@ public:
 
     void poll_events();
 
-    // Blocks until at least one event arrives. Use while the window is minimized.
+    /// Blocks until at least one event arrives. Use while the window is minimized.
     void wait_events();
 
     [[nodiscard]] bool should_close() const;
@@ -46,14 +46,14 @@ public:
 
     void set_title(const std::string& title);
 
-    // Size in pixels of the drawable area (what the swapchain must match).
+    /// Size in pixels of the drawable area (what the swapchain must match).
     [[nodiscard]] Extent framebuffer_extent() const;
     [[nodiscard]] bool is_minimized() const;
 
-    // Returns true once after the framebuffer size changed: recreate the swapchain then.
+    /// Returns true once after the framebuffer size changed: recreate the swapchain then.
     [[nodiscard]] bool consume_resize() noexcept;
 
-    // Instance extensions required to create a Vulkan surface for this window.
+    /// Instance extensions required to create a Vulkan surface for this window.
     [[nodiscard]] std::vector<const char*> required_vulkan_extensions() const;
 
     [[nodiscard]] GLFWwindow* native_handle() const noexcept;

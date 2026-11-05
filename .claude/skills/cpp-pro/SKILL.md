@@ -1,120 +1,50 @@
 ---
 name: cpp-pro
-description: Writes, optimizes, and debugs C++ applications using modern C++20/23 features, template metaprogramming, and high-performance systems techniques. Use when building or refactoring C++ code requiring concepts, ranges, coroutines, SIMD optimization, or careful memory management — or when addressing performance bottlenecks, concurrency issues, and build system configuration with CMake.
-license: MIT
-metadata:
-  author: https://github.com/Jeffallan
-  company: https://synergetic.solutions
-  version: "1.1.0"
-  domain: language
-  triggers: C++, C++20, C++23, modern C++, template metaprogramming, systems programming, performance optimization, SIMD, memory management, CMake
-  role: specialist
-  scope: implementation
-  output-format: code
-  related-skills: rust-engineer, embedded-systems
+description: Сучасний C++20 для AdventEngine — RAII, move-семантика, concepts, розкладка даних і кеш, алокатори, конкурентність, санітайзери. Use when writing or refactoring non-trivial C++, designing class interfaces or templates, optimizing memory layout, writing multithreaded code, or debugging memory errors and undefined behavior.
 ---
 
-# C++ Pro
+# Сучасний C++
 
-Senior C++ developer with deep expertise in modern C++20/23, systems programming, high-performance computing, and zero-overhead abstractions.
+Базові правила стилю й помилок — `docs/coding-style.md`. Тут — техніки.
 
-## Core Workflow
+## Інтерфейси
+- Шаблони обмежуються concepts, а не SFINAE: `template <std::floating_point T>`.
+- Статичний поліморфізм (шаблони, CRTP) — для гарячого коду; віртуальні функції — на грубих межах (модуль, система).
+- Параметри: дешеві типи за значенням, решта — `const T&`; `std::span` замість пари вказівник і розмір;
+  `std::string_view` для рядків без володіння. Не зберігай `string_view` і `span` довше за джерело.
+- `[[nodiscard]]` на функціях, результат яких не можна ігнорувати. `noexcept` там, де виняток неможливий.
+- `const` скрізь, де можливо; `constexpr` для обчислень під час компіляції.
 
-1. **Analyze architecture** — Review build system, compiler flags, performance requirements
-2. **Design with concepts** — Create type-safe interfaces using C++20 concepts
-3. **Implement zero-cost** — Apply RAII, constexpr, and zero-overhead abstractions
-4. **Verify quality** — Run sanitizers and static analysis; if AddressSanitizer or UndefinedBehaviorSanitizer report issues, fix all memory and UB errors before proceeding
-5. **Benchmark** — Profile with real workloads; if performance targets are not met, apply targeted optimizations (SIMD, cache layout, move semantics) and re-measure
+## Володіння і переміщення
+- `std::unique_ptr` — власність; `std::shared_ptr` — лише за справжньої спільної власності.
+- Клас з ресурсом: заборонене копіювання; переміщення — через `std::exchange`, з `noexcept`.
+- Rule of zero: якщо члени самі керують ресурсами, спецфункції не пишуться.
+- Повертай за значенням: RVO і переміщення роблять це дешевим.
 
-## Reference Guide
+## Дані і кеш
+- Гарячі дані — суцільними масивами (`std::vector`), структура масивів (SoA) для систем, що проходять
+  по одному полю тисяч об'єктів.
+- Уникай вказівників на окремі об'єкти в гарячих циклах: handles (індекс і покоління) замість вказівників.
+- Виділення пам'яті в кадрі — мінімум: перевикористовуй буфери, `reserve`, лінійні (arena) алокатори на кадр.
+- `alignas` для даних, що йдуть на GPU, і для уникнення false sharing між потоками (64 байти).
 
-Load detailed guidance based on context:
+## Конкурентність
+- Спершу однопотоковий код; потоки — після вимірювання і рішення в темі «Потоки».
+- Спільний стан — під `std::mutex` і `std::scoped_lock`; у гарячому шляху замість блокувань — дані на потік
+  з подальшим об'єднанням.
+- `std::atomic`: `memory_order_relaxed` лише для лічильників без залежних даних; для публікації даних —
+  `release` при записі і `acquire` при читанні.
+- `std::jthread` замість `std::thread`: сам приєднується при знищенні.
 
-| Topic | Reference | Load When |
-|-------|-----------|-----------|
-| Modern C++ Features | `references/modern-cpp.md` | C++20/23 features, concepts, ranges, coroutines |
-| Template Metaprogramming | `references/templates.md` | Variadic templates, SFINAE, type traits, CRTP |
-| Memory & Performance | `references/memory-performance.md` | Allocators, SIMD, cache optimization, move semantics |
-| Concurrency | `references/concurrency.md` | Atomics, lock-free structures, thread pools, coroutines |
-| Build & Tooling | `references/build-tooling.md` | CMake, sanitizers, static analysis, testing |
+## Перевірка
+- `./dev p tests-asan`, `./dev p sandbox-asan` — AddressSanitizer і UBSan.
+- Гонки даних — ThreadSanitizer (окремий пресет за потреби, несумісний з ASan).
+- Профілювання: пресет `relwithdebinfo`, `perf record` / `perf report`, `valgrind --tool=callgrind`.
 
-## Constraints
+## Не робити
+- C-style приведення типів — лише `static_cast` і споріднені.
+- `using namespace` у заголовках.
+- Невизначена поведінка «бо працює»: переповнення знакових цілих, читання неініціалізованих значень,
+  порушення strict aliasing (`std::bit_cast` або `std::memcpy` замість `reinterpret_cast` для перетворення типів).
 
-### MUST DO
-- Follow C++ Core Guidelines
-- Use concepts for template constraints
-- Apply RAII universally
-- Use `auto` with type deduction
-- Prefer `std::unique_ptr` and `std::shared_ptr`
-- Enable all compiler warnings (-Wall -Wextra -Wpedantic)
-- Run AddressSanitizer and UndefinedBehaviorSanitizer
-- Write const-correct code
-
-### MUST NOT DO
-- Use raw `new`/`delete` (prefer smart pointers)
-- Ignore compiler warnings
-- Use C-style casts (use static_cast, etc.)
-- Mix exception and error code patterns inconsistently
-- Write non-const-correct code
-- Use `using namespace std` in headers
-- Ignore undefined behavior
-- Skip move semantics for expensive types
-
-## Key Patterns
-
-### Concept Definition (C++20)
-```cpp
-// Define a reusable, self-documenting constraint
-template<typename T>
-concept Numeric = std::integral<T> || std::floating_point<T>;
-
-template<Numeric T>
-T clamp(T value, T lo, T hi) {
-    return std::clamp(value, lo, hi);
-}
-```
-
-### RAII Resource Wrapper
-```cpp
-// Wraps a raw handle; no manual cleanup needed at call sites
-class FileHandle {
-public:
-    explicit FileHandle(const char* path)
-        : handle_(std::fopen(path, "r")) {
-        if (!handle_) throw std::runtime_error("Cannot open file");
-    }
-    ~FileHandle() { if (handle_) std::fclose(handle_); }
-
-    // Non-copyable, movable
-    FileHandle(const FileHandle&) = delete;
-    FileHandle& operator=(const FileHandle&) = delete;
-    FileHandle(FileHandle&& other) noexcept
-        : handle_(std::exchange(other.handle_, nullptr)) {}
-
-    std::FILE* get() const noexcept { return handle_; }
-private:
-    std::FILE* handle_;
-};
-```
-
-### Smart Pointer Ownership
-```cpp
-// Prefer make_unique / make_shared; avoid raw new/delete
-auto buffer = std::make_unique<std::array<std::byte, 4096>>();
-
-// Shared ownership only when genuinely needed
-auto config = std::make_shared<Config>(parseArgs(argc, argv));
-```
-
-## Output Templates
-
-When implementing C++ features, provide:
-1. Header file with interfaces and templates
-2. Implementation file (when needed)
-3. CMakeLists.txt updates (if applicable)
-4. Test file demonstrating usage
-5. Brief explanation of design decisions and performance characteristics
-
-Maintained by [@jeffallan](https://github.com/jeffallan), Principal Consultant at [Synergetic Solutions](https://synergetic.solutions)
-
-[Documentation](https://jeffallan.github.io/claude-skills/skills/language/cpp-pro/)
+Адаптовано з `cpp-pro` (Jeffallan/claude-skills, MIT), див. `.claude/third-party-skills/README.md`.

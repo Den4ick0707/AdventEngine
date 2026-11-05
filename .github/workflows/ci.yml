@@ -120,12 +120,28 @@ jobs:
       - name: clang-tidy
         run: ./dev tidy ci-debug
 
+  docs:
+    name: Documentation (Doxygen)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends doxygen graphviz
+
+      # Fails on any Doxygen warning: broken references, malformed comments.
+      - name: Build documentation
+        run: ./dev docs --strict
+
   # The only check that branch rulesets require (Settings → Rules → Rulesets, see CONTRIBUTING.md).
   # Add new jobs to `needs` and they become required automatically.
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [linux, windows, lint]
+    needs: [linux, windows, lint, docs]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

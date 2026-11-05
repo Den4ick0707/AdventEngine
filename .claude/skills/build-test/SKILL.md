@@ -1,84 +1,41 @@
 ---
 name: build-test
-description: Збирання AdventEngine через CMake-пресети, запуск тестів і sandbox через ./dev, оновлення бібліотек у vendor/, читання помилок компілятора, clang-tidy та Vulkan validation layers, CI на GitHub Actions. Use when building, running tests, fixing build or CI errors, adding a dependency, or when the user says "збери", "запусти тести", "build", "не компілюється", "CI впав".
+description: Збирання, тести, smoke-тест, clang-format/clang-tidy, CI і бібліотеки у vendor/ в AdventEngine через ./dev. Use when building, running tests, fixing compiler, clang-tidy, validation-layer or CI errors, adding or updating a dependency — "збери", "запусти тести", "не компілюється", "CI впав".
 ---
 
-# Збирання та тестування
+# Збирання і перевірки
 
-## Перший запуск після клонування
-```bash
-git clone <url> && cd <repo>
-./dev setup --install    # системні пакети (apt / pacman / dnf / zypper), git-хуки, налаштування git
-./dev build
-```
-Бібліотеки вже лежать у `vendor/` (ADR 0005): ні submodules, ні мережа для збирання не потрібні.
-Що потрібно встановити (на Linux це робить `./dev setup --install`: Ubuntu/Debian, Arch/Manjaro, Fedora, openSUSE):
-- **Vulkan SDK** або пакети `glslc`, `vulkan-validationlayers`;
-- **CMake ≥ 3.25** і **Ninja**;
-- компілятор з C++20: **MSVC 2022**, **GCC 13+** або **Clang 17+**;
-- для GLFW на Linux: `libwayland-dev libxkbcommon-dev wayland-protocols xorg-dev`.
+Команди, пресети, CI і хуки описані в `docs/development.md`. Тут — порядок дій.
 
-На Windows `./dev` немає: використовуй пресети напряму з «Developer PowerShell for VS 2022», щоб Ninja знайшов `cl.exe`.
+## Перед комітом
+1. `./dev format`
+2. `./dev ci` — формат, збирання `ci-debug` з `-Werror`, тести, smoke, clang-tidy.
+3. Якщо змінювався рендер або kernel — переглянь лог smoke: `build/ci-debug/smoke.log`.
 
-## Пресети
-| Пресет | Призначення |
-|--------|-------------|
-| `debug` | Debug + validation layers + ADVENT_ASSERT |
-| `release` | Release, без validation |
-| `relwithdebinfo` | Release + налагоджувальна інформація (профілювання) |
-| `asan` | Debug + AddressSanitizer/UBSan (лише Linux) |
-| `ci-debug`, `ci-release` | як debug/release, але попередження = помилки (так збирає CI) |
+## Помилка збирання
+- Виправляй першу помилку компілятора, решта часто є її наслідком.
+- Збирай тим самим пресетом, що впав: `./dev build ci-debug`.
+- Попередження в `ci-*` — помилки. Не вимикай їх прапорцями, виправляй код.
 
-```bash
-./dev build debug sandbox                 # = cmake --build --preset debug --target sandbox
-./dev test debug                          # = збирання + ctest --preset debug
-./dev run debug -- --frames 120           # вийти після 120 кадрів
-./dev smoke ci-debug                      # як у CI: без дисплея (xvfb), падає на [error] / [vulkan:validation|performance] warn
-./dev p <profile>                         # профілі з scripts/runs/ (gdb, asan, release, ...)
-```
-Новий спеціальний запуск — новий профіль: `./dev new-profile <name>` (особистий, у `scripts/runs/local/`)
-або файл у `scripts/runs/` за шаблоном `_template.sh`, якщо він корисний усім.
+## Smoke-тест упав
+- `grep -nE '\[error\]|\[warn \]' build/<preset>/smoke.log`
+- `[vulkan:validation]` — помилка в коді. `VUID-...` шукай у специфікації Vulkan.
+- `[vulkan:general]` на рівні `warn` тест не зупиняє; на рівні `error` — проблема середовища (драйвер, ICD).
+- Validation layers не вимикай.
 
-## Робочий цикл
-1. Після змін: `./dev test ci-debug`. Попередження тут вважаються помилками, як і в CI.
-2. Виправляй помилки компіляції, починаючи з **першої**.
-3. Якщо змінювався рендер або runtime — `./dev smoke ci-debug` і переглянь лог.
-4. Перед комітом: `./dev format`, потім `./dev ci` (формат, збирання, тести, smoke, clang-tidy).
-   Окремі файли: `./dev tidy <файли.cpp>`. Конфіг `.clang-tidy` перевіряє і стиль імен.
+## clang-tidy
+- Еталон — версія з CI (18). Якщо локальна новіша і знаходить нове: виправ код так, щоб проходив обидві,
+  або вимкни правило в `.clang-tidy` і поясни це в PR.
+- Окремі файли: `./dev tidy <file.cpp>`.
 
-## CI (.github/workflows/ci.yml)
-- **Linux:**
-  - GCC Debug і Release, Clang Debug;
-  - тести та smoke-запуск sandbox під `xvfb-run` з програмним Vulkan (lavapipe), у Debug — з validation layers.
-- **Windows:** MSVC Debug і Release, лише тести (на раннері немає GPU).
-- **lint:** `./dev format --check` і `./dev tidy ci-debug`.
-- **ci-ok:** чекає на всі job-и; саме його вимагають rulesets гілок. Новий job додавай у `needs` job-а `ci-ok`.
-- Linux-кроки викликають `./dev`, тож локальний `./dev ci` перевіряє те саме.
+## CI впав
+1. Відкрий лог упалого кроку.
+2. Відтвори локально тим самим пресетом і компілятором (`CC`, `CXX`).
+3. Windows-специфічні помилки (MSVC) локально не відтворюються: читай лог і виправляй переносимо.
 
-Якщо CI впав, відкрий лог кроку і відтвори його локально тим самим пресетом. Помилки Linux-збірки на Windows можна перевірити через WSL.
-
-## Validation layers
-- Повідомлення йдуть у лог з префіксом `[vulkan:<джерело>]`:
-  - `validation` — неправильне використання API, тобто помилка в нашому коді;
-  - `performance` — неоптимальне використання;
-  - `general` — завантажувач і драйвери, напр. `Skipping this driver` для ICD, що не підходить машині (Mesa Dozen `libvulkan_dzn.so` поза WSL). Це не помилка коду.
-- Мета для Debug — **нуль** error і нуль `validation`/`performance` warn. `./dev smoke` падає саме на них.
-- `VUID-...` з повідомлення шукай у специфікації Vulkan.
-- Якщо layers не встановлені, рушій попереджає й працює без них. Встанови Vulkan SDK.
-
-## Додавання залежності (vendor/)
-Лише після погодження з користувачем і з ADR.
-```bash
-git clone --depth 1 --branch <tag> https://github.com/<owner>/<repo>.git vendor/<name>
-rm -rf vendor/<name>/.git
-```
-Далі:
-- додай ціль у `vendor/CMakeLists.txt`: через `add_subdirectory(<name> SYSTEM EXCLUDE_FROM_ALL)` або власною INTERFACE/STATIC-ціллю `advent_<name>` з аліасом `advent::<name>` і `SYSTEM`-include;
-- онови таблиці в `vendor/README.md`, `README.md` і `CLAUDE.md`.
-
-### Оновлення бібліотеки
-```bash
-./dev vendor-update <тека> <git-url> <тег>     # замінює vendor/<тека> і показує колишні локальні правки
-./dev ci
-```
-Перенеси правки `// ADVENT PATCH:` (див. `vendor/README.md`), закомить як `vendor(<lib>): Update to <tag>`.
+## Бібліотеки (vendor/)
+Нова бібліотека — лише після згоди користувача і ADR.
+- Додати: `git clone --depth 1 --branch <tag> <url> vendor/<name> && rm -rf vendor/<name>/.git`,
+  ціль у `vendor/CMakeLists.txt` (`SYSTEM`, аліас `advent::<name>`), рядок у `vendor/README.md`.
+- Оновити: `./dev vendor-update <dir> <url> <tag>`, перенести правки `// ADVENT PATCH:`, `./dev ci`,
+  коміт `vendor(<lib>): Update to <tag>`.

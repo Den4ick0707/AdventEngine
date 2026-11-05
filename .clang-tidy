@@ -28,7 +28,7 @@ Checks: >
 
 WarningsAsErrors: ''
 
-# Only our code: engine/, apps/, tests/. Never third_party/.
+# Only our code: engine/, apps/, tests/. Never vendor/.
 HeaderFilterRegex: '.*/(engine|apps|tests)/.*'
 
 FormatStyle: file

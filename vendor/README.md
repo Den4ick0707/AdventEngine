@@ -18,8 +18,9 @@
 | stb | `stb/` | d14d46f | https://github.com/nothings/stb |
 | cgltf | `cgltf/` | 1.15 | https://github.com/jkuhlmann/cgltf |
 | nlohmann/json | `json/` | 3.12.0 | https://github.com/nlohmann/json |
+| doxygen-awesome-css | `doxygen-awesome-css/` | v2.5.0 | https://github.com/jothepro/doxygen-awesome-css |
 
-Змінили версію — оновіть цю таблицю, а також таблиці в `README.md` і `docs/adr/0002`.
+Ця таблиця — єдиний список версій. Змінили версію — оновіть її в тому самому коміті.
 
 ## Локальні правки
 
