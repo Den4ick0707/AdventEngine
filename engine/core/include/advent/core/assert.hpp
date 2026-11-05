@@ -10,7 +10,7 @@ namespace advent::detail
 
 // ADVENT_ASSERT(condition, "message") checks programmer errors in Debug builds.
 // In Release the condition is not evaluated. Do not put side effects into it.
-#if defined(ADVENT_ENABLE_ASSERTS)
+#ifdef ADVENT_ENABLE_ASSERTS
 #define ADVENT_ASSERT(condition, message)                                                                              \
     do {                                                                                                               \
         if (!static_cast<bool>(condition)) [[unlikely]] {                                                              \

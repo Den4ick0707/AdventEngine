@@ -10,7 +10,7 @@ namespace advent::log
 {
 namespace
 {
-#if defined(NDEBUG)
+#ifdef NDEBUG
 constexpr Level k_default_level = Level::info;
 #else
 constexpr Level k_default_level = Level::debug;

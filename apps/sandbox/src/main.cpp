@@ -74,7 +74,7 @@ std::optional<advent::runtime::ApplicationConfig> parse_args(std::span<char*> ar
         const bool has_value       = i + 1 < args.size();
 
         if (arg == "--help" || arg == "-h") {
-            std::fputs(k_usage.data(), stdout);
+            std::fwrite(k_usage.data(), 1, k_usage.size(), stdout);
             exit_code = EXIT_SUCCESS;
             return std::nullopt;
         }
