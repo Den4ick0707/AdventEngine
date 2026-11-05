@@ -15,7 +15,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 GITHUB = "https://github.com/Den4ick0707/AdventEngine/blob/dev/"
-PAGE_IDS = {"docs/adr/README.md": "adr_index", "vendor/README.md": "vendor_readme"}
+PAGE_IDS = {"docs/adr/README.md": "adr_index", "vendor/README.md": "vendor_readme",
+            "docs/coursework/README.md": "coursework"}
 LINK = re.compile(r"\]\(([^)\s]+)\)")
 
 

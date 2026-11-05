@@ -44,6 +44,8 @@ INPUT                  = README.md \
                          docs/roadmap.md \
                          docs/coding-style.md \
                          docs/threading.md \
+                         docs/coursework/README.md \
+                         docs/coursework/plan.md \
                          CONTRIBUTING.md \
                          docs/adr/README.md \
                          docs/adr \
