@@ -3,45 +3,39 @@ name: shader-pipeline
 description: Шейдери AdventEngine — GLSL, компіляція в SPIR-V через advent_compile_shaders (glslc), розкладка дескрипторів, push constants, графічні пайплайни. Use when writing or changing shaders, descriptor set layouts, push constants or pipeline creation.
 ---
 
-# Шейдери та пайплайни
+# Шейдери і пайплайни
 
 ## Файли
-- Вихідний код: `shaders/<name>.vert|frag|comp` (GLSL 460).
-- Спільні визначення: `shaders/common/*.glsl`, підключаються через `#extension GL_GOOGLE_include_directive : require` і `#include "file.glsl"`.
-- Результат: `build/<preset>/bin/shaders/<name>.<stage>.spv`, поруч із виконуваними файлами.
+- Вихідний код: `shaders/<name>.vert|frag|comp`, GLSL 460.
+- Спільне: `shaders/common/*.glsl`, підключення через `GL_GOOGLE_include_directive` і `#include`.
+- Результат: `build/<preset>/bin/shaders/<name>.<stage>.spv`.
 
-## Компіляція (вже готово в cmake/AdventShaders.cmake)
+## Компіляція
 ```cmake
-advent_compile_shaders(sandbox SOURCES
-    ${PROJECT_SOURCE_DIR}/shaders/triangle.vert
-    ${PROJECT_SOURCE_DIR}/shaders/triangle.frag
-)
+advent_compile_shaders(sandbox SOURCES ${PROJECT_SOURCE_DIR}/shaders/triangle.vert ${PROJECT_SOURCE_DIR}/shaders/triangle.frag)
 ```
-- Викликає `glslc --target-env=vulkan1.3`; у Debug додає `-g` для RenderDoc.
-- Відстежує `#include`: зміна файлу з `shaders/common/` перезбирає залежні шейдери.
-- Передає цілі макрос `ADVENT_SHADER_DIR` з абсолютним шляхом до `.spv`. Для релізних збірок завантаження має також шукати `shaders/` поруч із виконуваним файлом.
-- `glslc` береться з Vulkan SDK (`VULKAN_SDK`), на Linux також із пакета `glslc`.
-- **CI:** на Windows-раннері немає `glslc`. Коли з'являться шейдери, додай у `.github/workflows/ci.yml` і `release.yml` встановлення Vulkan SDK для Windows, наприклад окремий крок із завантаженням SDK. Це нова зовнішня дія, тож погодь її з користувачем.
+- `glslc --target-env=vulkan1.3`, у Debug `-g`; зміни в `#include` відстежуються.
+- Цілі передається `ADVENT_SHADER_DIR`. Релізне завантаження також шукає `shaders/` поруч із виконуваним файлом.
+- Windows CI не має `glslc`. Коли з'являться перші шейдери, потрібно встановлення Vulkan SDK у
+  `ci.yml` і `release.yml` — погодь з користувачем.
 
-## Розкладка дескрипторів (конвенція)
-| set | Призначення | Частота оновлення |
-|-----|-------------|-------------------|
-| 0 | Глобальні дані кадру: камера (view, proj), світло, час | раз на кадр |
-| 1 | Матеріал: текстури, параметри | на матеріал |
-| 2 | Об'єкт: матриці суглобів (SSBO) для скінінгу | на об'єкт |
+## Дескриптори
+Організація (класичні набори чи bindless) — відкрите питання теми «Рендерер», вирішується через ADR.
+Тимчасова конвенція до рішення:
 
-Push constants (≤ 128 байт): матриця моделі та індекси.
+| set | Дані | Частота |
+|-----|------|---------|
+| 0 | кадр: камера, світло, час | раз на кадр |
+| 1 | матеріал: текстури, параметри | на матеріал |
+| 2 | об'єкт: матриці суглобів (SSBO) | на об'єкт |
 
-- Uniform-буфери — std140, SSBO — std430. Структури на C++ стороні дублюють розкладку з `alignas(16)` і `static_assert(sizeof(...) == N)`.
-- Вершинні атрибути мають збігатися з `VkVertexInputAttributeDescription`. Перехід на vertex pulling — лише через ADR.
+- Push constants до 128 байт: матриця моделі, індекси.
+- Uniform — std140, SSBO — std430. C++-структури: `alignas(16)` і `static_assert(sizeof(T) == N)`.
 
 ## Пайплайни
-- Dynamic rendering: `VkPipelineRenderingCreateInfo` з форматами color і depth, `renderPass = VK_NULL_HANDLE`.
+- `VkPipelineRenderingCreateInfo` з форматами color і depth, `renderPass = VK_NULL_HANDLE`.
 - Dynamic state: щонайменше `VIEWPORT` і `SCISSOR`.
-- Окремі пайплайни для статичних і скінованих мешів (різні вершинні атрибути).
-- Створення пайплайнів збери в builder-клас у `engine/renderer`.
+- Окремі пайплайни для статичних і скінованих мешів. Створення — через builder у `renderer`.
 
 ## Перевірка
-- `glslc` не видає попереджень.
-- Validation layers без помилок про невідповідність інтерфейсів шейдерів чи дескрипторів.
-- Концепції ефектів (простори координат, UV, rim light) — у скілі `shader-programming`. Його приклади написані в стилі OpenGL, тож переносити їх треба за правилами цього скілу.
+- `glslc` без попереджень, validation без помилок інтерфейсу шейдерів і дескрипторів.

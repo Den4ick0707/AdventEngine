@@ -1,35 +1,30 @@
 ---
 name: engine-module
-description: Створення нового модуля AdventEngine (CMake-ціль advent_<module>, include-структура, namespace, тести). Use when adding a new engine module/subsystem such as assets, animation or scene, creating a CMake library target, or restructuring module boundaries — "новий модуль", "додай підсистему", "add module".
+description: Створення нового модуля AdventEngine — CMake-ціль advent_<module>, структура include/src, namespace, тести, місце в шарах. Use when adding an engine module or subsystem (assets, animation, scene, editor, raytracing), creating a library target or changing module boundaries — "новий модуль", "додай підсистему".
 ---
 
-# Новий модуль AdventEngine
-
-Модуль — статична бібліотека CMake з чіткими публічними заголовками в `engine/<module>/`.
-Зразки для наслідування: `engine/core` (без залежностей) і `engine/platform` (з приватною залежністю GLFW).
+# Новий модуль
 
 ## Перед початком
-1. Перевір правила залежностей у `CLAUDE.md`. Якщо новий модуль їх порушує — зупинись і запропонуй ADR (`/adr`).
-2. Уточни в користувача: назву, відповідальність модуля (одне речення), від яких модулів він залежить.
+1. Звір із `docs/architecture.md`: шар модуля, від кого він залежить, чи не порушує правил залежностей.
+   Порушення або новий шар — зупинись і запропонуй ADR.
+2. Узгодь з користувачем: назву, відповідальність одним реченням, залежності, публічний API.
 
 ## Структура
 ```
 engine/<module>/
   CMakeLists.txt
-  include/advent/<module>/   # публічні заголовки
-  src/                       # реалізація та приватні заголовки
-tests/<module>/              # тести модуля
+  include/advent/<module>/   публічні заголовки
+  src/                       реалізація і приватні заголовки
+tests/<module>/
 ```
 
-## CMakeLists.txt модуля (шаблон)
+## CMakeLists.txt
 ```cmake
 add_library(advent_<module> STATIC)
 add_library(advent::<module> ALIAS advent_<module>)
 
-target_sources(advent_<module>
-    PRIVATE
-        src/<file>.cpp
-)
+target_sources(advent_<module> PRIVATE src/<file>.cpp)
 
 target_include_directories(advent_<module>
     PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -37,24 +32,23 @@ target_include_directories(advent_<module>
 )
 
 target_link_libraries(advent_<module>
-    PUBLIC  advent::core     # лише те, що видно в публічних заголовках
-    PRIVATE                  # реалізаційні залежності, напр. advent::cgltf
+    PUBLIC  advent::core     # лише те, чиї типи видно в публічних заголовках
+    PRIVATE                  # реалізація: advent::cgltf, glfw, ...
 )
-advent_set_warnings(advent_<module>)   # cmake/AdventWarnings.cmake
+advent_set_warnings(advent_<module>)
 ```
-Файли перелічуй явно в `target_sources` — без `file(GLOB ...)`.
 
 ## Правила
-- Публічні заголовки підключаються як `#include <advent/<module>/foo.hpp>`; `#pragma once`.
-- Кожен заголовок сам підключає все, що використовує (PCH немає).
-- Залежність `PUBLIC` — лише якщо її типи з'являються в публічних заголовках, інакше `PRIVATE`.
-- Сторонні бібліотеки підключай через цілі з `vendor/CMakeLists.txt` (`advent::glm`, `advent::stb`, `advent::cgltf`, `advent::json`, `glfw`, `advent::volk`, `advent::vma`).
-- Vulkan-типи дозволені лише в `renderer`; GLFW — лише в `platform` і (приватно) `renderer`.
-- Код у `namespace advent::<module>`; для `core` — просто `advent`.
-- Додай `add_subdirectory(<module>)` в `engine/CMakeLists.txt` з урахуванням порядку залежностей і прибери модуль зі списку «Planned modules» там.
-- Створи тест у `tests/<module>/` і зареєструй його через `advent_add_test(...)` у `tests/CMakeLists.txt`.
+- Простір імен `advent::<module>`. Публічні заголовки документовані `///` (Doxygen).
+- Залежність `PUBLIC` — лише якщо її типи є в публічному API.
+- Межа модуля груба: обмін масивами даних, без віртуальних викликів на кожен об'єкт.
+- Поки система модулів (маніфести, реєстр у kernel) не готова, модуль підключається через
+  `add_subdirectory` в `engine/CMakeLists.txt` у порядку залежностей.
 
-## Перевірка
-- `cmake --preset ci-debug && cmake --build --preset ci-debug` — без попереджень (у пресетах `ci-*` вони вважаються помилками).
-- `ctest --preset ci-debug` проходить.
-- Онови в `CLAUDE.md` таблицю модулів (статус і залежності).
+## Тести
+- `tests/<module>/<name>_test.cpp`, реєстрація: `advent_add_test(<module>_<name>_test <module>/<name>_test.cpp)`
+  у `tests/CMakeLists.txt`. Якщо тесту потрібен модуль, додай його в `target_link_libraries` тесту.
+
+## Готово, коли
+- `./dev ci` проходить.
+- `docs/architecture.md`: модуль у таблиці «Поточний стан».
