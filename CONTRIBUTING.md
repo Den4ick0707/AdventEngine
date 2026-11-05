@@ -1,6 +1,6 @@
 # Як працювати з репозиторієм
 
-## Перший запуск (один раз на машину)
+## Перший запуск (один раз локально)
 
 ```bash
 git clone https://github.com/Den4ick0707/AdventEngine.git
@@ -11,13 +11,6 @@ cd AdventEngine
 
 `./dev setup` без `--install` лише перевіряє інструменти й вмикає хуки. Повторний запуск безпечний.
 
-Один раз для самого GitHub-репозиторію (потрібні права адміністратора і [GitHub CLI](https://cli.github.com)):
-
-```bash
-gh auth login
-./scripts/github/setup-repo.sh --dry-run    # показати, що буде змінено
-./scripts/github/setup-repo.sh
-```
 
 ## Гілки
 
