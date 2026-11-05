@@ -115,7 +115,7 @@ Build & test                  [preset] defaults to \$ADVENT_PRESET or "debug"
   build [preset] [target]     configure if needed, then build
   test [preset] [ctest args]  build, then run unit tests
   run [preset] [-- args]      build and run sandbox:  ./dev run debug -- --frames 600
-  smoke [preset]              headless sandbox run; fails on errors and Vulkan warnings
+  smoke [preset]              headless sandbox run; fails on errors and validation warnings
   clean [preset|all]          remove build/<preset> or the whole build/
 
 Run profiles (scripts/runs/*.sh, personal ones in scripts/runs/local/)
@@ -254,8 +254,10 @@ cmd_smoke() {
     local status=0
     with_display "build/$preset/bin/sandbox" --frames "$SMOKE_FRAMES" 2>&1 | tee "$log" || status=$?
     ((status == 0)) || die "sandbox exited with code $status (log: $log)"
-    if grep -E '\[error\]|\[warn \] \[vulkan\]' "$log" >/dev/null; then
-        die "errors or Vulkan validation warnings in the log ($log)"
+    # Fails on any error and on validation/performance warnings. [vulkan:general] warnings come from the
+    # loader and drivers (e.g. an ICD that does not fit this machine) and only describe the environment.
+    if grep -E '\[error\]|\[warn \] \[vulkan:(validation|performance)\]' "$log" >/dev/null; then
+        die "errors or Vulkan validation/performance warnings in the log ($log)"
     fi
     ok "smoke test passed"
 }

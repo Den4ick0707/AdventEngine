@@ -57,18 +57,35 @@ int device_type_score(VkPhysicalDeviceType type) noexcept
     }
 }
 
+// Message source, shown in the log as [vulkan:<source>]:
+//   validation  - incorrect API usage found by the validation layers (a bug in our code);
+//   performance - non-optimal API usage;
+//   general     - loader and driver messages about the environment, e.g. a skipped ICD.
+// The smoke test (./dev smoke) fails on validation and performance warnings, but not on general ones.
+std::string_view message_source(VkDebugUtilsMessageTypeFlagsEXT types) noexcept
+{
+    if ((types & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0) {
+        return "validation";
+    }
+    if ((types & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0) {
+        return "performance";
+    }
+    return "general";
+}
+
 VKAPI_ATTR VkBool32 VKAPI_CALL on_debug_message(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-                                                VkDebugUtilsMessageTypeFlagsEXT /*types*/,
+                                                VkDebugUtilsMessageTypeFlagsEXT types,
                                                 const VkDebugUtilsMessengerCallbackDataEXT* data, void* /*user_data*/)
 {
-    const char* message = (data != nullptr && data->pMessage != nullptr) ? data->pMessage : "(no message)";
+    const char* message           = (data != nullptr && data->pMessage != nullptr) ? data->pMessage : "(no message)";
+    const std::string_view source = message_source(types);
 
     if ((severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
-        log::error("[vulkan] {}", message);
+        log::error("[vulkan:{}] {}", source, message);
     } else if ((severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0) {
-        log::warn("[vulkan] {}", message);
+        log::warn("[vulkan:{}] {}", source, message);
     } else {
-        log::trace("[vulkan] {}", message);
+        log::trace("[vulkan:{}] {}", source, message);
     }
     return VK_FALSE; // never abort the call that triggered the message
 }
