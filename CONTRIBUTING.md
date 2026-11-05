@@ -11,13 +11,23 @@ cd AdventEngine
 
 `./dev setup` без `--install` лише перевіряє інструменти й вмикає хуки. Повторний запуск безпечний.
 
-Один раз для самого GitHub-репозиторію (потрібні права адміністратора і [GitHub CLI](https://cli.github.com)):
+## Налаштування GitHub
 
-```bash
-gh auth login
-./scripts/github/setup-repo.sh --dry-run    # показати, що буде змінено
-./scripts/github/setup-repo.sh
-```
+Зроблені вручну один раз. Якщо репозиторій доведеться налаштовувати заново, ось що має бути:
+
+- **Settings → General:** гілка за замовчуванням `dev`; увімкнено merge commits і squash (назва коміту — з назви й опису PR),
+  rebase вимкнено; увімкнено *Always suggest updating PR branches*, *Allow auto-merge*, *Automatically delete head branches*.
+- **Settings → Rules → Rulesets** (усі *Active*, без bypass, крім тегів):
+
+  | Ruleset | Ціль | Правила | Способи злиття |
+  |---------|------|---------|----------------|
+  | main | `main` | Restrict deletions, PR (0 approvals, conversation resolution), status check `ci-ok`, Block force pushes | Merge |
+  | dev | `dev` | так само | Merge, Squash |
+  | release | `release/**` | так само, **без** Restrict deletions (гілка видаляється після злиття) | Merge, Squash |
+  | version tags | теги `v*` | Restrict updates, Restrict deletions, Block force pushes; bypass — Repository admin | — |
+
+- **Мітки:** `bug`, `feature`, `docs`, `renderer`, `vendor`, `dependencies`, `ci`, `build`, `skip-changelog`
+  (на них посилаються шаблони issues, Dependabot і `.github/release.yml`).
 
 ## Гілки
 
@@ -36,7 +46,7 @@ hotfix/X.Y.Z  (з main)  ──merge PR──►  main  ──tag──►  back
 | `release/X.Y.Z` | `dev` | `main` | merge commit | підготовка релізу: версія, виправлення, CHANGELOG |
 | `hotfix/X.Y.Z` | `main` | `main` | merge commit | термінове виправлення випущеної версії |
 
-Правила (їх вмикає `setup-repo.sh`, а частину перевіряють локальні хуки):
+Правила (rulesets на GitHub, частину з них перевіряють і локальні хуки):
 - у `main`, `dev` і `release/*` зміни потрапляють **лише через Pull Request**;
 - PR зливається лише тоді, коли перевірка **`ci-ok`** зелена (вона чекає на всі job-и CI);
 - гілку після злиття GitHub видаляє автоматично;
