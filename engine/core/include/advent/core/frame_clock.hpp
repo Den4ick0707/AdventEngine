@@ -5,10 +5,10 @@
 
 namespace advent
 {
-// Measures time between frames.
-//
-// The delta is clamped (0.25 s by default) so a breakpoint or a window drag does not
-// produce one huge step that breaks the simulation.
+/// Measures time between frames.
+///
+/// The delta is clamped (0.25 s by default) so a breakpoint or a window drag does not
+/// produce one huge step that breaks the simulation.
 class FrameClock
 {
 public:
@@ -16,11 +16,11 @@ public:
 
     explicit FrameClock(double max_delta_seconds = 0.25) noexcept;
 
-    // Seconds since the previous tick. The first tick after construction or reset() returns 0.
+    /// Seconds since the previous tick. The first tick after construction or reset() returns 0.
     double tick() noexcept;
     double tick(Clock::time_point now) noexcept;
 
-    // Forget the previous time point, e.g. after the window was minimized.
+    /// Forget the previous time point, e.g. after the window was minimized.
     void reset() noexcept;
 
     [[nodiscard]] std::uint64_t frame_count() const noexcept;

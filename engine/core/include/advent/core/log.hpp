@@ -19,17 +19,17 @@ enum class Level : std::uint8_t
 
 [[nodiscard]] std::string_view to_string(Level level) noexcept;
 
-// Messages below this level are dropped. Default: debug in Debug builds, info otherwise.
+/// Messages below this level are dropped. Default: debug in Debug builds, info otherwise.
 void set_min_level(Level level) noexcept;
 [[nodiscard]] Level min_level() noexcept;
 [[nodiscard]] bool is_enabled(Level level) noexcept;
 
-// Receives every message that passed the level filter. Pass an empty function to restore
-// the default sink (stdout for trace..info, stderr for warn..error).
+/// Receives every message that passed the level filter. Pass an empty function to restore
+/// the default sink (stdout for trace..info, stderr for warn..error).
 using Sink = std::function<void(Level level, std::string_view message)>;
 void set_sink(Sink sink);
 
-// Thread-safe. Prefer the formatting helpers below.
+/// Thread-safe. Prefer the formatting helpers below.
 void write(Level level, std::string_view message);
 
 template <typename... Args>

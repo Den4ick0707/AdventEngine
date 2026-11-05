@@ -6,7 +6,7 @@ body:
     id: module
     attributes:
       label: Модуль
-      options: [core, platform, renderer, runtime, assets, animation, scene, apps/sandbox, інструменти / CI]
+      options: [core, platform, kernel (runtime), renderer, assets, animation, scene, editor, apps/sandbox, документація, інструменти / CI]
     validations:
       required: true
   - type: textarea

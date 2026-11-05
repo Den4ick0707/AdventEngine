@@ -2,8 +2,8 @@
 
 namespace advent::runtime
 {
-// A piece of engine or game functionality driven by the Application loop.
-// Modules are initialized in the order they were added and shut down in reverse order.
+/// A piece of engine or game functionality driven by the Application loop.
+/// Modules are initialized in the order they were added and shut down in reverse order.
 class Module
 {
 public:

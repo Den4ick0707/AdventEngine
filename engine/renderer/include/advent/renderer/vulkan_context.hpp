@@ -28,11 +28,11 @@ struct QueueFamilies
     std::uint32_t present  = UINT32_MAX;
 };
 
-// Owns the core Vulkan objects shared by the whole renderer:
-// instance, debug messenger, surface, physical/logical device, queues and the VMA allocator.
-//
-// Requires Vulkan 1.3 with dynamicRendering and synchronization2.
-// Construction throws (VulkanError / std::runtime_error) if no suitable GPU is found.
+/// Owns the core Vulkan objects shared by the whole renderer:
+/// instance, debug messenger, surface, physical/logical device, queues and the VMA allocator.
+///
+/// Requires Vulkan 1.3 with dynamicRendering and synchronization2.
+/// Construction throws (VulkanError / std::runtime_error) if no suitable GPU is found.
 class VulkanContext
 {
 public:
@@ -57,8 +57,8 @@ public:
     [[nodiscard]] const VkPhysicalDeviceProperties& device_properties() const noexcept { return m_properties; }
     [[nodiscard]] bool validation_enabled() const noexcept { return m_validation_enabled; }
 
-    // Gives a Vulkan object a readable name for validation messages and RenderDoc.
-    // Does nothing when validation is disabled.
+    /// Gives a Vulkan object a readable name for validation messages and RenderDoc.
+    /// Does nothing when validation is disabled.
     void set_debug_name(VkObjectType type, std::uint64_t handle, const char* name) const;
 
     void wait_idle() const;

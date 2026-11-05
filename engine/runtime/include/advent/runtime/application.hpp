@@ -20,18 +20,20 @@ struct ApplicationConfig
     platform::WindowDesc window{};
     renderer::VulkanContextDesc vulkan{};
 
-    double fixed_timestep_seconds = 1.0 / 60.0; // rate of on_fixed_update()
-    std::uint32_t max_fps         = 0;          // 0 = unlimited (later: limited by vsync)
-    std::uint64_t max_frames      = 0;          // 0 = run until the window closes; used by smoke tests
+    double fixed_timestep_seconds = 1.0 / 60.0; ///< rate of on_fixed_update()
+    std::uint32_t max_fps         = 0;          ///< 0 = unlimited (later: limited by vsync)
+    std::uint64_t max_frames      = 0;          ///< 0 = run until the window closes; used by smoke tests
 };
 
-// Base class for games and tools. Owns the window and the Vulkan context and runs the main loop:
-//
-//   poll events -> on_fixed_update() x N -> on_update() -> modules -> on_render(alpha)
-//
-// on_fixed_update() runs at a constant rate (physics, gameplay simulation);
-// on_update() runs once per frame with the variable frame time (camera, UI);
-// alpha in on_render() is how far we are between two fixed steps (for interpolation).
+/// Base class for games and tools. Owns the window and the Vulkan context and runs the main loop:
+///
+/// ```
+/// poll events -> on_fixed_update() x N -> on_update() -> modules -> on_render(alpha)
+/// ```
+///
+/// on_fixed_update() runs at a constant rate (physics, gameplay simulation);
+/// on_update() runs once per frame with the variable frame time (camera, UI);
+/// alpha in on_render() is how far we are between two fixed steps (for interpolation).
 class Application
 {
 public:
@@ -43,7 +45,7 @@ public:
     Application(Application&&)                 = delete;
     Application& operator=(Application&&)      = delete;
 
-    // Runs the main loop until the window closes or quit() is called. Returns the process exit code.
+    /// Runs the main loop until the window closes or quit() is called. Returns the process exit code.
     int run();
     void quit() noexcept;
 
@@ -68,9 +70,11 @@ private:
     bool m_running = true;
 };
 
-// Creates App, runs it and turns any escaping exception into a logged error and a non-zero exit code.
-//
-//   int main() { return advent::runtime::run_application<MyGame>(config); }
+/// Creates App, runs it and turns any escaping exception into a logged error and a non-zero exit code.
+///
+/// ```cpp
+/// int main() { return advent::runtime::run_application<MyGame>(config); }
+/// ```
 template <std::derived_from<Application> App, typename... Args>
 int run_application(Args&&... args) noexcept
 {
