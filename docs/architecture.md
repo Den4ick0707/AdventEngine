@@ -56,7 +56,7 @@ core          лог, assert, час, пам'ять, математика; бе�
 | `runtime` | kernel | частково | `Application` (головний цикл), `Module`, `run_application` |
 | `renderer` | модуль | в роботі | `VulkanContext`, `ADVENT_VK_CHECK`; далі swapchain |
 | `assets` | модуль | заплановано | `.meta`, імпорт glTF і текстур у CPU-дані (cgltf, stb), реєстр, гаряче перезавантаження |
-| `animation` | модуль | заплановано | скелет, кліпи, семплінг, матриці суглобів |
+| `animation` | модуль | заплановано | пози, семплінг, crossfade, матриці скінінгу |
 | `scene` | модуль | заплановано | archetype ECS, трансформації, ієрархія |
 | `input` | модуль | заплановано | дії й прив'язки поверх сирого вводу platform |
 | `apps/sandbox` | застосунок | готово | демо для ручної перевірки і smoke-тесту |
@@ -165,6 +165,19 @@ ADR [0006](adr/0006-modular-architecture.md), [0017](adr/0017-module-manifest.md
 
 GPU-ресурси за handle ассета створює рендерер; `assets` про GPU не знає.
 
+## Анімація
+
+[ADR 0020](adr/0020-animation.md).
+
+| Частина | Рішення |
+|---------|---------|
+| Поза | локальні TRS усіх суглобів у SoA-масивах (`FrameArena`); суглоби не є сутностями |
+| Операції | `sample`, `blend`, `blend_masked`; crossfade, шари, blend space і стан-машина будуються з них |
+| Дані | `Skeleton` (батько раніше дитини, inverse bind) і `AnimationClip` з модуля `assets` |
+| Компоненти | `AnimationPlayer` (кліп, час, crossfade), `JointMatrices` (вихід для рендерера), `AttachToJoint` |
+| Системи | `update`: `animation.sample` -> `animation.joints`, до `scene.propagate_transforms` |
+| Перша версія | програвання кліпу і crossfade; шари, blend space, стан-машина, root motion — пізніше |
+
 ## Головний цикл
 
 ADR [0004](adr/0004-main-loop-fixed-timestep.md), [0016](adr/0016-frame-phases-and-systems.md).
@@ -223,7 +236,7 @@ begin_frame -> fixed_update x N -> update -> late_update -> render(alpha) -> end
 | 5. Рендерер | ресурси, дескриптори (класичні чи bindless), render graph, шейдери, трасування променів, напрям осі Y | відкрито |
 | 6. Ассети | імпорт під час роботи чи власний формат, handles, гаряче перезавантаження | вирішено ([ADR 0019](adr/0019-assets.md)) |
 | 7. Сцена | граф сцени чи ECS (EnTT або власний) | вирішено ([ADR 0018](adr/0018-scene-archetype-ecs.md)) |
-| 8. Анімація | семплінг, змішування, стан-машина | відкрито |
+| 8. Анімація | семплінг, змішування, стан-машина | вирішено ([ADR 0020](adr/0020-animation.md)) |
 | 9. Серіалізація | формат сцен і проєктів | відкрито |
 | 10. Редактор | бібліотека UI (Dear ImGui чи інша), функції першої версії, як модулі `kind: editor` розширюють редактор, кілька вікон | відкрито |
 | 11. Розповсюдження | пакування, версіонування API, інструмент для модулів | відкрито |

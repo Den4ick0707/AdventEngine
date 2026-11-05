@@ -25,3 +25,4 @@
 | [0017](0017-module-manifest.md) | Маніфест модуля `module.json`, виявлення і розривання циклів залежностей | Accepted |
 | [0018](0018-scene-archetype-ecs.md) | Сцена: власна archetype ECS (таблиці, `CommandBuffer`, sparse-компоненти), ієрархія і трансформації | Accepted |
 | [0019](0019-assets.md) | Ассети: `.meta`-файли, імпорт джерел під час роботи, явний лічильник посилань, гаряче перезавантаження | Accepted |
+| [0020](0020-animation.md) | Анімація: поза — щільний масив, операції `sample`/`blend`, перша версія — кліп і crossfade | Accepted |
