@@ -101,7 +101,7 @@ Extent Window::framebuffer_extent() const
     int width  = 0;
     int height = 0;
     glfwGetFramebufferSize(m_window, &width, &height);
-    return {static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height)};
+    return {.width = static_cast<std::uint32_t>(width), .height = static_cast<std::uint32_t>(height)};
 }
 
 bool Window::is_minimized() const

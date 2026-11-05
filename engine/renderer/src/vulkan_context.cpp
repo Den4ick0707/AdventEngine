@@ -192,7 +192,7 @@ std::optional<QueueFamilies> find_queue_families(VkPhysicalDevice device, VkSurf
 
         // Prefer one family that can do both: no ownership transfers between queues.
         if (graphics && present == VK_TRUE) {
-            return QueueFamilies{index, index};
+            return QueueFamilies{.graphics = index, .present = index};
         }
         if (graphics && result.graphics == UINT32_MAX) {
             result.graphics = index;
