@@ -31,3 +31,4 @@
 | [0023](0023-editor-ui.md) | UI редактора — Dear ImGui (docking); редактор відкладено до завершення трасування | Accepted |
 | [0024](0024-testing.md) | Тестування: doctest, один виконуваний файл тестів на модуль | Accepted |
 | [0025](0025-physics.md) | Фізика: модуль-адаптер над Jolt (пізніше), інтерполяція через `PreviousTransform` | Accepted |
+| [0026](0026-distribution.md) | Розповсюдження: SemVer, `./dev package`, `./dev module`, GitHub Releases | Accepted |
