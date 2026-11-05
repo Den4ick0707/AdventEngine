@@ -16,27 +16,27 @@ APT_PACKAGES=(
     build-essential cmake ninja-build pkg-config git git-lfs
     libwayland-dev libxkbcommon-dev wayland-protocols xorg-dev
     glslc vulkan-tools vulkan-validationlayers mesa-vulkan-drivers
-    clang-format clang-tidy xvfb gdb
+    clang-format clang-tidy xvfb gdb doxygen graphviz
 )
 PACMAN_PACKAGES=(
     base-devel cmake ninja pkgconf git git-lfs
     wayland libxkbcommon wayland-protocols libx11 libxrandr libxinerama libxcursor libxi
     shaderc vulkan-tools vulkan-validation-layers vulkan-icd-loader vulkan-swrast
-    clang xorg-server-xvfb gdb
+    clang xorg-server-xvfb gdb doxygen graphviz
 )
 DNF_PACKAGES=(
     gcc-c++ make cmake ninja-build pkgconf-pkg-config git git-lfs
     wayland-devel libxkbcommon-devel wayland-protocols-devel
     libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
     glslc vulkan-tools vulkan-validation-layers vulkan-loader mesa-vulkan-drivers
-    clang-tools-extra xorg-x11-server-Xvfb gdb
+    clang-tools-extra xorg-x11-server-Xvfb gdb doxygen graphviz
 )
 ZYPPER_PACKAGES=(
     gcc-c++ make cmake ninja pkg-config git git-lfs
     wayland-devel libxkbcommon-devel wayland-protocols-devel
     libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
     shaderc vulkan-tools vulkan-validationlayers libvulkan1 libvulkan_lvp
-    clang-tools xvfb-run gdb
+    clang-tools xvfb-run gdb doxygen graphviz
 )
 
 # ---------------------------------------------------------------------------
@@ -126,7 +126,10 @@ Run profiles (scripts/runs/*.sh, personal ones in scripts/runs/local/)
 Code quality
   format [--check]            clang-format engine/, apps/, tests/
   tidy [preset] [files...]    clang-tidy (all our .cpp files by default)
-  ci                          everything CI checks: format, ci-debug build + tests, smoke, tidy
+  ci                          everything CI checks: format, ci-debug build + tests, smoke, tidy, docs
+
+Documentation
+  docs [--strict]             Doxygen site in build/docs/html (--strict: warnings are errors)
 
 Dependencies
   vendor-update <dir> <git-url> <tag>   replace vendor/<dir> with a fresh copy of <tag>
@@ -173,7 +176,7 @@ cmd_setup() {
     for tool in git cmake ninja c++ glslc; do
         if has "$tool"; then ok "$tool"; else warn "$tool not found" && missing=1; fi
     done
-    for tool in git-lfs clang-format clang-tidy xvfb-run vulkaninfo gdb; do
+    for tool in git-lfs clang-format clang-tidy xvfb-run vulkaninfo gdb doxygen dot; do
         if has "$tool"; then ok "$tool"; else warn "$tool not found (optional)"; fi
     done
     if has cmake; then
@@ -364,11 +367,46 @@ cmd_tidy() {
     if [[ ${#files[@]} -eq 0 ]]; then
         mapfile -t files < <(git ls-files 'engine/*.cpp' 'apps/*.cpp' 'tests/*.cpp')
     fi
-    # "N warnings generated" counts system-header warnings that are filtered anyway: hide that noise.
-    printf '%s\n' "${files[@]}" |
-        xargs -P "$(nproc 2>/dev/null || echo 4)" -n 4 "$clang_tidy" -p "build/$preset" --quiet --warnings-as-errors='*' 2>&1 |
-        { grep -vE '^[0-9]+ warnings? generated\.$' || true; }
+    # One clang-tidy per file in parallel; each writes to its own log so the output of different
+    # files does not interleave. Logs are printed in file order after all runs finish.
+    local logs
+    logs="$(mktemp -d)"
+    local status=0
+    printf '%s\n' "${files[@]}" | xargs -P "$(nproc 2>/dev/null || echo 4)" -I{} \
+        sh -c 'out="$4/$(printf %s "$3" | tr / _).log"; "$1" -p "$2" --quiet --warnings-as-errors="*" "$3" >"$out" 2>&1' \
+        _ "$clang_tidy" "build/$preset" {} "$logs" || status=$?
+    local file log
+    for file in "${files[@]}"; do
+        log="$logs/$(printf %s "$file" | tr / _).log"
+        # "N warnings generated" counts system-header warnings that are filtered anyway.
+        if grep -vqE '^[0-9]+ warnings? generated\.$' "$log" 2>/dev/null; then
+            printf '%s-- %s%s\n' "$c_bold" "$file" "$c_reset"
+            grep -vE '^[0-9]+ warnings? generated\.$' "$log"
+        fi
+    done
+    rm -rf "$logs"
+    ((status == 0)) || die "clang-tidy found problems"
     ok "clang-tidy is clean"
+}
+
+cmd_docs() {
+    has doxygen || die "doxygen not found (./dev setup --install)"
+    has dot || warn "graphviz (dot) not found: class diagrams will be missing"
+    local strict="NO"
+    [[ "${1:-}" == "--strict" ]] && strict="FAIL_ON_WARNINGS"
+    local version
+    version="$(sed -nE 's/^ *VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -1)"
+    step "docs (doxygen $(doxygen --version), version $version)"
+    rm -rf build/docs
+    mkdir -p build/docs
+    local status=0
+    ADVENT_VERSION="$version" ADVENT_DOXYGEN_WARN_AS_ERROR="$strict" doxygen docs/Doxyfile || status=$?
+    if [[ -s build/docs/warnings.log ]]; then
+        warn "doxygen warnings (build/docs/warnings.log):"
+        cat build/docs/warnings.log >&2
+    fi
+    ((status == 0)) || die "doxygen failed"
+    ok "open build/docs/html/index.html"
 }
 
 cmd_ci() {
@@ -376,6 +414,11 @@ cmd_ci() {
     cmd_test ci-debug
     cmd_smoke ci-debug
     cmd_tidy ci-debug
+    if has doxygen; then
+        cmd_docs --strict
+    else
+        warn "doxygen not found: documentation check skipped (CI runs it)"
+    fi
     step "${c_green}all CI checks passed${c_reset}"
 }
 
@@ -426,6 +469,7 @@ main() {
     format) cmd_format "$@" ;;
     tidy) cmd_tidy "$@" ;;
     ci) cmd_ci ;;
+    docs) cmd_docs "$@" ;;
     vendor-update) cmd_vendor_update "$@" ;;
     *) die "unknown command '$command' (./dev help)" ;;
     esac
