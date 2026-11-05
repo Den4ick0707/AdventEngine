@@ -1,6 +1,6 @@
 # Як працювати з репозиторієм
 
-## Перший запуск (один раз на машину)
+## Перший запуск (один раз локально)
 
 ```bash
 git clone https://github.com/Den4ick0707/AdventEngine.git
@@ -11,9 +11,7 @@ cd AdventEngine
 
 `./dev setup` без `--install` лише перевіряє інструменти й вмикає хуки. Повторний запуск безпечний.
 
-## Налаштування GitHub
 
-Зроблені вручну один раз. Якщо репозиторій доведеться налаштовувати заново, ось що має бути:
 
 - **Settings → General:** гілка за замовчуванням `dev`; увімкнено merge commits і squash (назва коміту — з назви й опису PR),
   rebase вимкнено; увімкнено *Always suggest updating PR branches*, *Allow auto-merge*, *Automatically delete head branches*.
