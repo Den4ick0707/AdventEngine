@@ -9,7 +9,7 @@
 - `apps/sandbox` з аргументами `--frames`, `--max-fps`, `--no-validation`.
 - `CMakePresets.json`: `debug`, `release`, `relwithdebinfo`, `asan`, `ci-debug`, `ci-release`.
 - `./dev`: налаштування, збирання, тести, запуск, профілі запуску, перевірки як у CI.
-- Git-хуки, шаблони PR та issues, Dependabot для GitHub Actions, `scripts/github/setup-repo.sh`.
+- Git-хуки, шаблони PR та issues, Dependabot для GitHub Actions.
 
 ### Changed
 - Залежності — копії в `vendor/` замість submodules (ADR 0005).
