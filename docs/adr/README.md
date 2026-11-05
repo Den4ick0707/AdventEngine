@@ -13,3 +13,9 @@
 | [0005](0005-vendored-dependencies.md) | Залежності — копії в `vendor/` (офлайн, локальні правки) | Accepted |
 | [0006](0006-modular-architecture.md) | Модульна архітектура: шари, kernel, статичні модулі, редактор окремим застосунком | Accepted |
 | [0007](0007-documentation-tooling.md) | Документація: сайт Doxygen із ручними розділами, довідником класів і діаграмами | Accepted |
+| [0008](0008-data-oriented-memory.md) | Data-oriented design, пам'ять через `std::pmr` з обліком по модулях, `SoaPool` | Accepted |
+| [0009](0009-identifiers.md) | Ідентифікатори: handles, UUID 128 біт, `StringId` | Accepted |
+| [0010](0010-error-handling.md) | Помилки: винятки при запуску, `Result<T>` у роботі, `ADVENT_ASSERT` | Accepted |
+| [0011](0011-logging.md) | Лог: категорії, кілька sink-ів, файл завжди, без виділень пам'яті | Accepted |
+| [0012](0012-virtual-file-system-and-projects.md) | Віртуальна файлова система, файл проєкту `.advent`, налаштування користувача | Accepted |
+| [0013](0013-input-layers.md) | Ввід: сирий стан пристроїв у platform, дії в модулі `input` | Accepted |
